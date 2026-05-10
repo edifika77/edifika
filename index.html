@@ -1023,8 +1023,8 @@ async function verProyecto(id) {
         <div class="fase-body" id="fb-${fi}">
           ${tareasF.length===0 ? `<div class="fase-hint">Toca "+ Agregar tarea" para detallar los trabajos y costos de esta fase.</div>` : ''}
           ${tareasF.map(t => `
-          <div class="tarea-item">
-            <div class="tarea-check ${t.estado==='completada'?'done':''}" onclick="toggleTarea('${t.id}','${f.id}',event)" title="Marcar como completada">
+          <div class="tarea-item" data-tarea-id="${t.id}">
+            <div class="tarea-check ${t.estado==='completada'?'done':''}" onclick="event.stopPropagation();toggleTarea('${t.id}','${f.id}')" title="${t.estado==='completada'?'Marcar pendiente':'Marcar completada'}">
               ${t.estado==='completada'?'✓':''}
             </div>
             <div class="tarea-info">
@@ -1035,7 +1035,7 @@ async function verProyecto(id) {
                 ${t.costo_real?`<span class="tarea-costo-tag tarea-real">Real: ${fmt(t.costo_real)}</span>`:''}
               </div>
             </div>
-            <div onclick="cambiarEstadoTarea('${t.id}','${f.id}',event)" style="font-size:10px;color:var(--s400);cursor:pointer;padding:4px;flex-shrink:0" title="Cambiar estado">⚙️</div>
+            <div onclick="event.stopPropagation();cambiarEstadoTarea('${t.id}','${f.id}')" style="font-size:10px;color:var(--s400);cursor:pointer;padding:4px 6px;flex-shrink:0;border-radius:6px" title="Cambiar estado">⚙️</div>
           </div>`).join('')}
           <div class="fase-add-btn" onclick="abrirTarea('${f.id}')">
             <span style="font-size:18px;line-height:1">+</span> Agregar tarea a esta fase
@@ -1092,17 +1092,19 @@ function restoreOpenFases() {
   });
 }
 
-async function cambiarEstadoTarea(tareaId, faseId, event) {
-  if (event) event.stopPropagation();
+async function cambiarEstadoTarea(tareaId, faseId) {
   const estados = ['pendiente','en_curso','completada'];
   const t = S.currentTareas.find(x => x.id === tareaId);
   if (!t) return;
   const idx = estados.indexOf(t.estado);
   const nuevoEstado = estados[(idx+1) % 3];
   t.estado = nuevoEstado;
-  await db.from('tareas').update({ estado: nuevoEstado }).eq('id', tareaId);
-  await verProyecto(S.currentProyecto.id);
-  restoreOpenFases();
+  db.from('tareas').update({ estado: nuevoEstado }).eq('id', tareaId);
+  // Solo actualizar el check y nombre en DOM
+  const checkEl = document.querySelector(`[data-tarea-id="${tareaId}"] .tarea-check`);
+  const nombreEl = document.querySelector(`[data-tarea-id="${tareaId}"] .tarea-nombre`);
+  if (checkEl) { checkEl.classList.toggle('done', nuevoEstado === 'completada'); checkEl.innerHTML = nuevoEstado === 'completada' ? '✓' : ''; }
+  if (nombreEl) nombreEl.classList.toggle('done', nuevoEstado === 'completada');
 }
 
 function abrirTarea(faseId) {
@@ -1137,15 +1139,27 @@ async function guardarTarea() {
   setLoading('btn-mt', false);
 }
 
-async function toggleTarea(tareaId, faseId, event) {
-  if (event) event.stopPropagation();
+async function toggleTarea(tareaId, faseId) {
   const tarea = S.currentTareas.find(t => t.id === tareaId);
   if (!tarea) return;
-  // Optimistic UI update
-  tarea.estado = tarea.estado === 'completada' ? 'pendiente' : 'completada';
-  await db.from('tareas').update({ estado: tarea.estado }).eq('id', tareaId);
-  await verProyecto(S.currentProyecto.id);
-  restoreOpenFases();
+
+  // Toggle estado
+  const nuevoEstado = tarea.estado === 'completada' ? 'pendiente' : 'completada';
+  tarea.estado = nuevoEstado;
+
+  // Actualizar DOM directamente sin re-renderizar nada
+  const checkEl = document.querySelector(`[data-tarea-id="${tareaId}"] .tarea-check`);
+  const nombreEl = document.querySelector(`[data-tarea-id="${tareaId}"] .tarea-nombre`);
+  if (checkEl) {
+    checkEl.classList.toggle('done', nuevoEstado === 'completada');
+    checkEl.innerHTML = nuevoEstado === 'completada' ? '✓' : '';
+  }
+  if (nombreEl) {
+    nombreEl.classList.toggle('done', nuevoEstado === 'completada');
+  }
+
+  // Guardar en base de datos (sin bloquear la UI)
+  db.from('tareas').update({ estado: nuevoEstado }).eq('id', tareaId);
 }
 
 function editarProyectoActual() {
