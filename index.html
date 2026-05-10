@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#F59E0B">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -629,11 +629,21 @@
 // ══════════════════════════════════════════════
 const SURL = 'https://qrqkonzlljmdstxlnpyv.supabase.co';
 const SKEY = 'sb_publishable_WCDe9-0rdXULeFL7T5AgmA_lneH-FbT';
+
+// Storage personalizado para evitar bloqueos de navegador
+const _mem = {};
+const customStorage = {
+  getItem: k => { try { return sessionStorage.getItem(k); } catch { return _mem[k] ?? null; } },
+  setItem: (k,v) => { try { sessionStorage.setItem(k,v); } catch { _mem[k] = v; } },
+  removeItem: k => { try { sessionStorage.removeItem(k); } catch { delete _mem[k]; } }
+};
+
 const db = supabase.createClient(SURL, SKEY, {
   auth: {
-    storage: window.localStorage,
+    storage: customStorage,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: false,
+    autoRefreshToken: true
   }
 });
 
@@ -742,7 +752,6 @@ async function handleRegister() {
 async function handleLogout() {
   toggleDropdown(true);
   await db.auth.signOut();
-  showScreen('auth');
 }
 
 // ══════════════════════════════════════════════
@@ -900,14 +909,13 @@ async function updateFase(id, estado) {
 async function guardarFase() {
   const nombre = v('mf-nombre');
   if (!nombre) return;
-  if (!S.currentProyecto) { toast('Selecciona un proyecto primero'); return; }
   setLoading('btn-mf', true);
-  try {
-    const { error } = await db.from('fases').insert({ proyecto_id: S.currentProyecto.id, nombre, estado: v('mf-estado'), orden: 99 });
-    if (error) { console.error('Fase error:', error); toast('Error: ' + error.message); }
-    else { closeModal('modal-fase'); document.getElementById('mf-nombre').value = ''; toast('Fase agregada ✓'); await verProyecto(S.currentProyecto.id); }
-  } catch(e) { console.error(e); toast('Error al guardar'); }
+  await db.from('fases').insert({ proyecto_id: S.currentProyecto.id, nombre, estado: v('mf-estado'), orden: 99 });
   setLoading('btn-mf', false);
+  closeModal('modal-fase');
+  document.getElementById('mf-nombre').value = '';
+  toast('Fase agregada ✓');
+  await verProyecto(S.currentProyecto.id);
 }
 
 // ══════════════════════════════════════════════
