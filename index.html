@@ -736,6 +736,7 @@ async function handleRegister() {
 async function handleLogout() {
   toggleDropdown(true);
   await db.auth.signOut();
+  showScreen('auth');
 }
 
 // ══════════════════════════════════════════════
