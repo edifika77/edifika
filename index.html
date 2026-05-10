@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Edifika">
   <meta name="theme-color" content="#F59E0B">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F59E0B'/%3E%3Crect x='12' y='28' width='40' height='28' rx='2' fill='%231C1917'/%3E%3Crect x='18' y='18' width='28' height='14' rx='2' fill='%23292524'/%3E%3Crect x='24' y='10' width='16' height='12' rx='2' fill='%231C1917'/%3E%3Crect x='20' y='33' width='8' height='8' rx='1' fill='%23F59E0B'/%3E%3Crect x='36' y='33' width='8' height='8' rx='1' fill='%23F59E0B'/%3E%3Crect x='28' y='38' width='8' height='18' rx='1' fill='%23F59E0B'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F59E0B'/%3E%3Crect x='12' y='28' width='40' height='28' rx='2' fill='%231C1917'/%3E%3Crect x='18' y='18' width='28' height='14' rx='2' fill='%23292524'/%3E%3Crect x='24' y='10' width='16' height='12' rx='2' fill='%231C1917'/%3E%3Crect x='20' y='33' width='8' height='8' rx='1' fill='%23F59E0B'/%3E%3Crect x='36' y='33' width='8' height='8' rx='1' fill='%23F59E0B'/%3E%3Crect x='28' y='38' width='8' height='18' rx='1' fill='%23F59E0B'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -93,7 +95,23 @@
     .topbar-empresa{font-size:11px;color:var(--s400);display:block;margin-top:1px}
     .avatar{width:32px;height:32px;border-radius:50%;background:var(--amber);color:var(--dark);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--fd);flex-shrink:0}
     #app-content{flex:1;overflow-y:auto;padding:16px;padding-bottom:80px}
-    @media(min-width:640px){#app-content{max-width:600px;margin:0 auto;padding:20px 24px 100px}}
+    /* ── DESKTOP RESPONSIVE ── */
+    @media(min-width:768px){
+      #screen-main{flex-direction:row}
+      .topbar{display:none}
+      #bottom-nav{display:none}
+      #desktop-sidebar{display:flex !important}
+      #app-content{padding:28px 40px 40px;max-width:none;flex:1}
+      .metrics-grid{grid-template-columns:repeat(4,1fr)}
+      #view-dashboard .section-header{margin-top:8px}
+      .modal{border-radius:16px;max-width:520px;margin:auto;margin-bottom:0}
+      .modal-overlay{align-items:center;justify-content:center}
+      .modal-overlay .modal{border-radius:16px;margin-bottom:0}
+      .page-title{font-size:26px}
+      .proyecto-card{padding:18px}
+      .detail-header{border-radius:0}
+    }
+    @media(max-width:767px){#desktop-sidebar{display:none !important}}
 
     /* ── VIEWS ── */
     .view{display:none}
@@ -252,6 +270,12 @@
 
     .divider{height:1px;background:var(--s100);margin:14px 0}
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    /* ── SIDEBAR ── */
+    .sb-item{display:flex;align-items:center;gap:12px;padding:11px 20px;font-size:14px;font-weight:500;color:var(--s400);cursor:pointer;transition:all .15s;margin:2px 8px;border-radius:10px}
+    .sb-item:hover{background:rgba(255,255,255,0.06);color:var(--white)}
+    .sb-item.active{background:rgba(245,158,11,0.15);color:var(--amber)}
+    .sb-item.active svg{stroke:var(--amber)}
+    .sb-item:not(.active) svg{stroke:var(--s400)}
   </style>
 </head>
 <body>
@@ -318,6 +342,45 @@
   <!-- ══ MAIN SCREEN ══ -->
   <div id="screen-main" class="screen" style="flex-direction:column">
 
+    <!-- DESKTOP SIDEBAR -->
+    <div id="desktop-sidebar" style="display:none;flex-direction:column;width:240px;min-height:100vh;background:var(--dark);padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.06)">
+      <div style="padding:0 20px 24px">
+        <div style="font-family:var(--fd);font-size:26px;font-weight:800;color:var(--amber);letter-spacing:-1px">Edifika</div>
+        <div style="font-size:11px;color:var(--s400);margin-top:2px" id="sb-empresa"></div>
+      </div>
+      <div style="flex:1">
+        <div class="sb-item active" id="sb-dashboard" onclick="navTo('dashboard')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </div>
+        <div class="sb-item" id="sb-proyectos" onclick="navTo('proyectos')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Proyectos
+        </div>
+        <div class="sb-item" id="sb-gastos" onclick="navTo('gastos')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          Gastos adicionales
+        </div>
+        <div class="sb-item" id="sb-ventas" onclick="navTo('ventas')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          Ventas
+        </div>
+      </div>
+      <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.06);margin-top:auto">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer" onclick="navTo('perfil')" id="sb-perfil-btn">
+          <div class="avatar" id="sb-avatar" style="width:36px;height:36px;font-size:15px">D</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--white)" id="sb-nombre">Usuario</div>
+            <div style="font-size:11px;color:var(--s400)" id="sb-rol">Admin</div>
+          </div>
+        </div>
+        <button onclick="handleLogout()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--s400);font-size:13px;cursor:pointer;font-family:var(--fb);text-align:left;display:flex;align-items:center;gap:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+
     <div class="topbar">
       <div>
         <div class="topbar-logo">Edifika</div>
@@ -327,7 +390,7 @@
         <div class="avatar" id="user-avatar" onclick="toggleDropdown()">D</div>
         <div class="dropdown-menu" id="user-dropdown">
           <div class="dropdown-item" onclick="navTo('perfil');toggleDropdown(true)">👤 Mi perfil</div>
-          <div class="dropdown-item danger" onclick="handleLogout()">🚪 Cerrar sesión</div>
+          <div class="dropdown-item danger" id="btn-logout-dd">🚪 Cerrar sesión</div>
         </div>
       </div>
     </div>
@@ -723,17 +786,47 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (ev === 'SIGNED_IN' && ses) { S.user = ses.user; await iniciar(); }
     if (ev === 'SIGNED_OUT') { S = { user:null,profile:null,empresa:null,proyectos:[],gastos:[],ventas:[],currentFases:[],currentTareas:[],currentProyecto:null,pfiltro:'todos',gfiltro:'todos' }; showScreen('auth'); }
   });
+
+  // Event delegation for dynamic elements - avoids stale onclick issues
+  document.addEventListener('click', e => {
+    if (e.target.closest('#btn-logout-dd')) handleLogout();
+  });
 });
 
 function setupPWA() {
-  const m = { name:'Edifika', short_name:'Edifika', start_url:'/', display:'standalone',
-    background_color:'#1C1917', theme_color:'#F59E0B',
-    icons:[{ src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23F59E0B'/%3E%3Ctext y='.85em' font-size='72' x='14'%3E🏗%3C/text%3E%3C/svg%3E", sizes:'192x192', type:'image/svg+xml' }]
+  const iconSvg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23F59E0B'/><rect x='96' y='224' width='320' height='224' rx='12' fill='%231C1917'/><rect x='144' y='144' width='224' height='112' rx='8' fill='%23292524'/><rect x='192' y='80' width='128' height='88' rx='8' fill='%231C1917'/><rect x='160' y='264' width='64' height='64' rx='6' fill='%23F59E0B'/><rect x='288' y='264' width='64' height='64' rx='6' fill='%23F59E0B'/><rect x='224' y='304' width='64' height='144' rx='6' fill='%23F59E0B'/></svg>`;
+  const iconUrl = `data:image/svg+xml,${iconSvg}`;
+  const m = {
+    name: 'Edifika', short_name: 'Edifika',
+    description: 'Gestión de proyectos de construcción',
+    start_url: '/', display: 'standalone',
+    background_color: '#1C1917', theme_color: '#F59E0B',
+    icons: [
+      { src: iconUrl, sizes: '192x192', type: 'image/svg+xml' },
+      { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+    ],
+    categories: ['business', 'productivity']
   };
   const lnk = document.createElement('link');
   lnk.rel = 'manifest';
   lnk.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type:'application/json' }));
   document.head.appendChild(lnk);
+
+  // Register service worker for offline + installability
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      const CACHE = 'edifika-v1';
+      self.addEventListener('install', e => { self.skipWaiting(); });
+      self.addEventListener('activate', e => { clients.claim(); });
+      self.addEventListener('fetch', e => {
+        if (e.request.method !== 'GET') return;
+        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+      });
+    `;
+    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl, { scope: '/' }).catch(()=>{});
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -769,6 +862,15 @@ function actualizarUI() {
   document.getElementById('perfil-empresa').textContent = S.empresa.nombre;
   document.getElementById('perfil-plan').textContent = capFirst(S.empresa.plan || 'free');
   document.getElementById('perfil-email').textContent = S.user.email;
+  // Sidebar
+  const sbAv = document.getElementById('sb-avatar');
+  if(sbAv) sbAv.textContent = ini;
+  const sbNom = document.getElementById('sb-nombre');
+  if(sbNom) sbNom.textContent = S.profile.nombre;
+  const sbRol = document.getElementById('sb-rol');
+  if(sbRol) sbRol.textContent = capFirst(S.profile.rol||'admin');
+  const sbEmp = document.getElementById('sb-empresa');
+  if(sbEmp) sbEmp.textContent = S.empresa.nombre;
 }
 
 // ══════════════════════════════════════════════
@@ -1227,13 +1329,36 @@ function renderDashboard() {
   const dp = document.getElementById('dash-proyectos');
   const recent = S.proyectos.slice(0, 3);
   if (!recent.length) { dp.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><h3>Sin proyectos</h3><p>Empieza creando tu primer proyecto</p><button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo proyecto</button></div>`; return; }
-  dp.innerHTML = recent.map(p => {
-    const total = S.gastos.filter(g => g.proyecto_id === p.id).reduce((a,b) => a + +b.monto, 0);
+  // Desktop: show all projects; mobile: last 3
+  const isMobile = window.innerWidth < 768;
+  const showList = isMobile ? recent : S.proyectos;
+  dp.innerHTML = showList.length ? showList.map(p => {
+    const gastosP = S.gastos.filter(g => g.proyecto_id === p.id);
+    const totalReal = gastosP.reduce((a,b) => a + +b.monto, 0);
+    const venta = S.ventas.find(v => v.proyecto_id === p.id);
+    const pct = p.presupuesto > 0 ? Math.min((totalReal/p.presupuesto)*100,100) : 0;
+    const over = p.presupuesto > 0 && totalReal > p.presupuesto;
+    const diasRestantes = p.fecha_entrega ? Math.ceil((new Date(p.fecha_entrega)-new Date())/(1000*60*60*24)) : null;
     return `<div class="proyecto-card" onclick="verProyecto('${p.id}')">
-      <div class="proyecto-card-top"><div><div class="proyecto-nombre">${p.nombre}</div>${p.ubicacion?`<div class="proyecto-ubicacion">📍 ${p.ubicacion}</div>`:''}</div><span class="badge badge-${p.estado}">${elabel(p.estado)}</span></div>
-      <div class="proyecto-meta"><div class="proyecto-meta-item">Gastado: <strong>${fmt(total)}</strong></div></div>
+      <div class="proyecto-card-top">
+        <div style="flex:1;min-width:0;margin-right:10px">
+          <div class="proyecto-nombre">${p.nombre}</div>
+          ${p.ubicacion?`<div class="proyecto-ubicacion">📍 ${p.ubicacion}</div>`:''}
+        </div>
+        <span class="badge badge-${p.estado}">${elabel(p.estado)}</span>
+      </div>
+      <div class="proyecto-meta" style="margin-top:10px">
+        <div class="proyecto-meta-item">💰 Gastado: <strong>${fmt(totalReal)}</strong></div>
+        ${p.presupuesto?`<div class="proyecto-meta-item">📋 Presupuesto: <strong>${fmt(p.presupuesto)}</strong></div>`:''}
+        ${venta?`<div class="proyecto-meta-item">🏠 Venta: <strong>${fmt(venta.precio)}</strong></div>`:''}
+        ${diasRestantes!==null?`<div class="proyecto-meta-item" style="color:${diasRestantes<0?'var(--red)':diasRestantes<30?'var(--amber-d)':'inherit'}">${diasRestantes<0?'⚠️ Vencido '+(Math.abs(diasRestantes))+'d':'📅 '+diasRestantes+' días restantes'}</div>`:''}
+      </div>
+      ${p.presupuesto?`<div class="progress-wrap" style="margin-top:10px">
+        <div class="progress-label"><span>Ejecución presupuestal</span><span style="color:${over?'var(--red)':'inherit'}">${pct.toFixed(0)}%${over?' ⚠️ EXCEDIDO':''}</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${over?'var(--red)':pct>80?'var(--amber)':'var(--green)'}"></div></div>
+      </div>`:''}
     </div>`;
-  }).join('');
+  }).join('') : `<div class="empty"><div class="empty-icon">🏗️</div><h3>Sin proyectos</h3><p>Empieza creando tu primer proyecto</p><button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo proyecto</button></div>`;
 }
 
 // ══════════════════════════════════════════════
@@ -1241,9 +1366,14 @@ function renderDashboard() {
 // ══════════════════════════════════════════════
 function navTo(view) {
   showView(view);
+  // Mobile bottom nav
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const ni = document.getElementById(`nav-${view}`);
   if (ni) ni.classList.add('active');
+  // Desktop sidebar
+  document.querySelectorAll('.sb-item').forEach(n => n.classList.remove('active'));
+  const si = document.getElementById(`sb-${view}`);
+  if (si) si.classList.add('active');
   if (view === 'dashboard') renderDashboard();
   if (view === 'proyectos') { renderProyectos(S.proyectos); document.getElementById('proyectos-count').textContent = `${S.proyectos.length} proyecto${S.proyectos.length!==1?'s':''}`; }
   if (view === 'gastos') renderGastos(S.gastos);
@@ -1295,8 +1425,8 @@ function hideErr(id) { document.getElementById(id)?.classList.remove('show'); }
 function setLoading(id, on) {
   const btn = document.getElementById(id);
   if (!btn) return;
-  if (on) { btn._t = btn.innerHTML; btn.innerHTML = '<div class="spinner"></div>'; btn.disabled = true; }
-  else { btn.innerHTML = btn._t||btn.innerHTML; btn.disabled = false; }
+  if (on) { btn._t = btn.textContent || btn.innerHTML; btn.innerHTML = '<div class="spinner"></div>'; btn.disabled = true; }
+  else { if(btn._t) btn.innerHTML = btn._t; btn.disabled = false; }
 }
 
 function toast(msg) {
