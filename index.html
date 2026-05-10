@@ -621,6 +621,33 @@
   </div>
 </div>
 
+<!-- Modal Tarea -->
+<div class="modal-overlay" id="modal-tarea">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Agregar tarea</div>
+    <input type="hidden" id="mt-fase-id">
+    <div class="form-group"><label class="form-label-light">Nombre de la tarea *</label><input type="text" id="mt-nombre" class="form-input-light" placeholder="Ej: Excavación de zapatas"></div>
+    <div class="form-group"><label class="form-label-light">Descripción (opcional)</label><input type="text" id="mt-desc" class="form-input-light" placeholder="Detalle adicional"></div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Costo estimado ($)</label><input type="number" id="mt-estimado" class="form-input-light" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label-light">Costo real ($)</label><input type="number" id="mt-real" class="form-input-light" placeholder="0.00"></div>
+    </div>
+    <div class="form-group"><label class="form-label-light">Estado</label>
+      <select id="mt-estado" class="form-input-light">
+        <option value="pendiente">Pendiente</option>
+        <option value="en_curso">En curso</option>
+        <option value="completada">Completada</option>
+      </select>
+    </div>
+    <div id="mt-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-tarea')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-mt" onclick="guardarTarea()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -653,7 +680,7 @@ const db = supabase.createClient(SURL, SKEY, {
 let S = {
   user: null, profile: null, empresa: null,
   proyectos: [], gastos: [], ventas: [],
-  currentProyecto: null,
+  currentProyecto: null, currentFases: [], currentTareas: [],
   pfiltro: 'todos', gfiltro: 'todos'
 };
 
@@ -668,7 +695,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   db.auth.onAuthStateChange(async (ev, ses) => {
     if (ev === 'SIGNED_IN' && ses) { S.user = ses.user; await iniciar(); }
-    if (ev === 'SIGNED_OUT') { S = { user:null,profile:null,empresa:null,proyectos:[],gastos:[],ventas:[],currentProyecto:null,pfiltro:'todos',gfiltro:'todos' }; showScreen('auth'); }
+    if (ev === 'SIGNED_OUT') { S = { user:null,profile:null,empresa:null,proyectos:[],gastos:[],ventas:[],currentFases:[],currentTareas:[],currentProyecto:null,pfiltro:'todos',gfiltro:'todos' }; showScreen('auth'); }
   });
 });
 
@@ -813,41 +840,83 @@ async function verProyecto(id) {
   if (!p) return;
   S.currentProyecto = p;
 
-  const { data: fases } = await db.from('fases').select('*').eq('proyecto_id', id).order('orden');
+  const [{ data: fases }, { data: tareas }] = await Promise.all([
+    db.from('fases').select('*').eq('proyecto_id', id).order('orden'),
+    db.from('tareas').select('*').eq('proyecto_id', id).order('created_at')
+  ]);
+
+  S.currentFases = fases || [];
+  S.currentTareas = tareas || [];
 
   document.getElementById('det-nombre').textContent = p.nombre;
   document.getElementById('det-ubicacion').textContent = p.ubicacion || '';
   document.getElementById('det-badge').innerHTML = `<span class="badge badge-${p.estado}">${elabel(p.estado)}</span>`;
 
+  // Calcular totales desde tareas
+  const totalEst = (tareas||[]).reduce((a,b) => a + +b.costo_estimado, 0);
+  const totalReal = (tareas||[]).reduce((a,b) => a + +b.costo_real, 0);
   const gastosP = S.gastos.filter(g => g.proyecto_id === id);
-  const total = gastosP.reduce((a,b) => a + +b.monto, 0);
-  document.getElementById('det-gasto').textContent = fmt(total);
-  document.getElementById('det-presupuesto').textContent = p.presupuesto ? fmt(p.presupuesto) : '—';
+  const totalGastos = gastosP.reduce((a,b) => a + +b.monto, 0);
+  const totalInvertido = totalReal + totalGastos;
+
+  document.getElementById('det-gasto').textContent = fmt(totalInvertido);
+  document.getElementById('det-presupuesto').textContent = p.presupuesto ? fmt(p.presupuesto) : fmt(totalEst) + ' est.';
 
   const balEl = document.getElementById('det-balance');
-  if (p.presupuesto) {
-    const bal = p.presupuesto - total;
+  const ref = p.presupuesto || totalEst;
+  if (ref) {
+    const bal = ref - totalInvertido;
     balEl.textContent = bal >= 0 ? `${fmt(bal)} disp.` : `${fmt(Math.abs(bal))} exceso`;
     balEl.style.color = bal >= 0 ? 'var(--green)' : 'var(--red)';
   } else { balEl.textContent = '—'; balEl.style.color = 'var(--white)'; }
 
-  // Fases
+  // Fases con tareas expandibles
   const fasEl = document.getElementById('det-fases');
-  fasEl.innerHTML = fases && fases.length ? fases.map(f => `
-    <div class="fase-item">
-      <div class="fase-dot ${f.estado}"></div>
-      <div class="fase-nombre">${f.nombre}</div>
-      <select class="fase-select" onchange="updateFase('${f.id}',this.value)">
-        <option value="pendiente" ${f.estado==='pendiente'?'selected':''}>Pendiente</option>
-        <option value="en_curso" ${f.estado==='en_curso'?'selected':''}>En curso</option>
-        <option value="completada" ${f.estado==='completada'?'selected':''}>Completada</option>
-      </select>
-    </div>`).join('') : '<p style="font-size:13px;color:var(--s400);padding:4px 0">Sin fases registradas.</p>';
+  if (!fases || !fases.length) {
+    fasEl.innerHTML = '<p style="font-size:13px;color:var(--s400);padding:4px 0">Sin fases registradas.</p>';
+  } else {
+    fasEl.innerHTML = fases.map((f, fi) => {
+      const tareasF = (tareas||[]).filter(t => t.fase_id === f.id);
+      const estF = tareasF.reduce((a,b) => a + +b.costo_estimado, 0);
+      const realF = tareasF.reduce((a,b) => a + +b.costo_real, 0);
+      return `
+      <div class="fase-bloque">
+        <div class="fase-header" onclick="toggleFase('fb-${fi}')">
+          <div class="fase-dot ${f.estado}"></div>
+          <div class="fase-nombre">${f.nombre}</div>
+          ${estF || realF ? `<div class="fase-totales">${realF ? fmt(realF)+' real' : fmt(estF)+' est.'}</div>` : ''}
+          <select class="fase-select" onclick="event.stopPropagation()" onchange="updateFase('${f.id}',this.value)">
+            <option value="pendiente" ${f.estado==='pendiente'?'selected':''}>Pendiente</option>
+            <option value="en_curso" ${f.estado==='en_curso'?'selected':''}>En curso</option>
+            <option value="completada" ${f.estado==='completada'?'selected':''}>Completada</option>
+          </select>
+          <span class="fase-chevron" id="chev-${fi}">▼</span>
+        </div>
+        <div class="fase-body" id="fb-${fi}">
+          ${tareasF.map(t => `
+          <div class="tarea-item">
+            <div class="tarea-check ${t.estado==='completada'?'done':''}" onclick="toggleTarea('${t.id}','${f.id}')">
+              ${t.estado==='completada'?'✓':''}
+            </div>
+            <div class="tarea-info">
+              <div class="tarea-nombre" style="${t.estado==='completada'?'text-decoration:line-through;color:var(--s400)':''}">${t.nombre}</div>
+              ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:''}
+              <div class="tarea-costos">
+                ${t.costo_estimado?`<span class="tarea-costo-tag tarea-est">Est: ${fmt(t.costo_estimado)}</span>`:''}
+                ${t.costo_real?`<span class="tarea-costo-tag tarea-real">Real: ${fmt(t.costo_real)}</span>`:''}
+              </div>
+            </div>
+          </div>`).join('')}
+          <div class="fase-add-btn" onclick="abrirTarea('${f.id}')">+ Agregar tarea</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 
-  // Gastos (últimos 5)
+  // Gastos adicionales (últimos 5)
   const gEl = document.getElementById('det-gastos');
   const ult = gastosP.slice(0, 5);
-  gEl.innerHTML = ult.length ? ult.map(g => gastoHTML(g, false)).join('') : '<p style="font-size:13px;color:var(--s400);padding:4px 0">Sin gastos registrados aún.</p>';
+  gEl.innerHTML = ult.length ? ult.map(g => gastoHTML(g, false)).join('') : '<p style="font-size:13px;color:var(--s400);padding:4px 0">Sin gastos adicionales.</p>';
 
   // Venta
   const venta = S.ventas.find(v => v.proyecto_id === id);
@@ -860,6 +929,55 @@ async function verProyecto(id) {
     '<p style="font-size:13px;color:var(--s400)">Sin venta registrada para este proyecto.</p>';
 
   showView('proyecto-detalle');
+}
+
+function toggleFase(id) {
+  const body = document.getElementById(id);
+  const idx = id.split('-')[1];
+  const chev = document.getElementById('chev-' + idx);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+function abrirTarea(faseId) {
+  document.getElementById('mt-fase-id').value = faseId;
+  document.getElementById('mt-nombre').value = '';
+  document.getElementById('mt-desc').value = '';
+  document.getElementById('mt-estimado').value = '';
+  document.getElementById('mt-real').value = '';
+  document.getElementById('mt-estado').value = 'pendiente';
+  openModal('modal-tarea');
+}
+
+async function guardarTarea() {
+  const nombre = v('mt-nombre');
+  if (!nombre) return showErr('mt-error', 'El nombre es obligatorio');
+  const faseId = document.getElementById('mt-fase-id').value;
+  setLoading('btn-mt', true);
+  try {
+    const { error } = await db.from('tareas').insert({
+      fase_id: faseId,
+      proyecto_id: S.currentProyecto.id,
+      empresa_id: S.empresa.id,
+      nombre,
+      descripcion: v('mt-desc') || null,
+      costo_estimado: parseFloat(v('mt-estimado')) || 0,
+      costo_real: parseFloat(v('mt-real')) || 0,
+      estado: v('mt-estado')
+    });
+    if (error) { toast('Error: ' + error.message); console.error(error); }
+    else { closeModal('modal-tarea'); toast('Tarea agregada ✓'); await verProyecto(S.currentProyecto.id); }
+  } catch(e) { console.error(e); toast('Error al guardar'); }
+  setLoading('btn-mt', false);
+}
+
+async function toggleTarea(tareaId, faseId) {
+  const tarea = S.currentTareas.find(t => t.id === tareaId);
+  if (!tarea) return;
+  const nuevoEstado = tarea.estado === 'completada' ? 'pendiente' : 'completada';
+  await db.from('tareas').update({ estado: nuevoEstado }).eq('id', tareaId);
+  await verProyecto(S.currentProyecto.id);
 }
 
 function editarProyectoActual() {
