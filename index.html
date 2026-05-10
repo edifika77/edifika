@@ -167,14 +167,40 @@
     .venta-precio{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--green)}
 
     /* ── FASES ── */
-    .fase-item{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--s100)}
-    .fase-item:last-child{border-bottom:none}
-    .fase-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
-    .fase-dot.pendiente{background:var(--s200)}
+    .fase-bloque{border:1px solid var(--s200);border-radius:14px;margin-bottom:10px;overflow:hidden;background:var(--white)}
+    .fase-header{display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+    .fase-header:active{background:var(--s50)}
+    .fase-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+    .fase-dot.pendiente{background:var(--s200);border:2px solid var(--s400)}
     .fase-dot.en_curso{background:var(--amber)}
     .fase-dot.completada{background:var(--green)}
-    .fase-nombre{font-size:14px;font-weight:500;color:var(--dark2);flex:1}
-    .fase-select{border:1px solid var(--s200);padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;font-family:var(--fb);color:var(--dark2);background:var(--white);cursor:pointer;outline:none}
+    .fase-nombre{font-size:14px;font-weight:600;color:var(--dark2);flex:1;min-width:0}
+    .fase-estado-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+    .fase-estado-pendiente{background:var(--s100);color:var(--s600)}
+    .fase-estado-en_curso{background:var(--amber-l);color:var(--amber-d)}
+    .fase-estado-completada{background:#D1FAE5;color:#065F46}
+    .fase-totales{font-size:11px;color:var(--s400);white-space:nowrap;flex-shrink:0}
+    .fase-chevron{color:var(--s400);font-size:10px;flex-shrink:0;transition:transform .25s}
+    .fase-chevron.open{transform:rotate(180deg)}
+    .fase-body{display:none;border-top:1px solid var(--s100)}
+    .fase-body.open{display:block}
+    .fase-hint{font-size:12px;color:var(--s400);padding:12px 14px;font-style:italic}
+    .tarea-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-bottom:1px solid var(--s100);background:var(--white)}
+    .tarea-item:last-of-type{border-bottom:none}
+    .tarea-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--s200);flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;transition:all .2s;background:var(--white)}
+    .tarea-check:hover{border-color:var(--amber)}
+    .tarea-check.done{background:var(--green);border-color:var(--green);color:var(--white)}
+    .tarea-info{flex:1;min-width:0}
+    .tarea-nombre{font-size:14px;font-weight:500;color:var(--dark2);line-height:1.3}
+    .tarea-nombre.done{text-decoration:line-through;color:var(--s400)}
+    .tarea-desc{font-size:12px;color:var(--s400);margin-top:2px}
+    .tarea-costos{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+    .tarea-costo-tag{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+    .tarea-est{background:var(--amber-l);color:var(--amber-d)}
+    .tarea-real{background:#D1FAE5;color:#065F46}
+    .fase-add-btn{display:flex;align-items:center;gap:8px;padding:12px 14px;font-size:13px;color:var(--amber-d);font-weight:600;cursor:pointer;background:var(--s50);border-top:1px solid var(--s100);-webkit-tap-highlight-color:transparent}
+    .fase-add-btn:hover{background:var(--amber-l)}
+    .fase-select{display:none}
 
     /* ── DETAIL HEADER ── */
     .detail-header{background:var(--dark);margin:-16px -16px 16px;padding:14px 16px 18px}
@@ -879,35 +905,43 @@ async function verProyecto(id) {
       const tareasF = (tareas||[]).filter(t => t.fase_id === f.id);
       const estF = tareasF.reduce((a,b) => a + +b.costo_estimado, 0);
       const realF = tareasF.reduce((a,b) => a + +b.costo_real, 0);
+      const estadoLabel = {pendiente:'Pendiente',en_curso:'En curso',completada:'Completada'}[f.estado]||f.estado;
       return `
       <div class="fase-bloque">
-        <div class="fase-header" onclick="toggleFase('fb-${fi}')">
+        <div class="fase-header" onclick="toggleFase('fb-${fi}','chev-${fi}')">
           <div class="fase-dot ${f.estado}"></div>
           <div class="fase-nombre">${f.nombre}</div>
-          ${estF || realF ? `<div class="fase-totales">${realF ? fmt(realF)+' real' : fmt(estF)+' est.'}</div>` : ''}
-          <select class="fase-select" onclick="event.stopPropagation()" onchange="updateFase('${f.id}',this.value)">
-            <option value="pendiente" ${f.estado==='pendiente'?'selected':''}>Pendiente</option>
-            <option value="en_curso" ${f.estado==='en_curso'?'selected':''}>En curso</option>
-            <option value="completada" ${f.estado==='completada'?'selected':''}>Completada</option>
-          </select>
-          <span class="fase-chevron" id="chev-${fi}">▼</span>
+          ${estF||realF ? `<div class="fase-totales">${realF?'💰 '+fmt(realF):'📋 '+fmt(estF)+' est.'}</div>` : ''}
+          <span class="fase-estado-badge fase-estado-${f.estado}">${estadoLabel}</span>
+          <span class="fase-chevron" id="chev-${fi}">▾</span>
         </div>
         <div class="fase-body" id="fb-${fi}">
+          ${tareasF.length===0 ? `<div class="fase-hint">Toca "+ Agregar tarea" para detallar los trabajos y costos de esta fase.</div>` : ''}
           ${tareasF.map(t => `
           <div class="tarea-item">
-            <div class="tarea-check ${t.estado==='completada'?'done':''}" onclick="toggleTarea('${t.id}','${f.id}')">
+            <div class="tarea-check ${t.estado==='completada'?'done':''}" onclick="toggleTarea('${t.id}','${f.id}')" title="Marcar como completada">
               ${t.estado==='completada'?'✓':''}
             </div>
             <div class="tarea-info">
-              <div class="tarea-nombre" style="${t.estado==='completada'?'text-decoration:line-through;color:var(--s400)':''}">${t.nombre}</div>
+              <div class="tarea-nombre ${t.estado==='completada'?'done':''}">${t.nombre}</div>
               ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:''}
               <div class="tarea-costos">
-                ${t.costo_estimado?`<span class="tarea-costo-tag tarea-est">Est: ${fmt(t.costo_estimado)}</span>`:''}
+                ${t.costo_estimado?`<span class="tarea-costo-tag tarea-est">Estimado: ${fmt(t.costo_estimado)}</span>`:''}
                 ${t.costo_real?`<span class="tarea-costo-tag tarea-real">Real: ${fmt(t.costo_real)}</span>`:''}
               </div>
             </div>
+            <div onclick="cambiarEstadoTarea('${t.id}','${f.id}')" style="font-size:10px;color:var(--s400);cursor:pointer;padding:4px;flex-shrink:0" title="Cambiar estado">⚙️</div>
           </div>`).join('')}
-          <div class="fase-add-btn" onclick="abrirTarea('${f.id}')">+ Agregar tarea</div>
+          <div class="fase-add-btn" onclick="abrirTarea('${f.id}')">
+            <span style="font-size:18px;line-height:1">+</span> Agregar tarea a esta fase
+          </div>
+          <div style="padding:10px 14px;display:flex;gap:8px;border-top:1px solid var(--s100);background:var(--s50)">
+            <select onchange="updateFase('${f.id}',this.value)" style="font-size:12px;padding:5px 10px;border:1px solid var(--s200);border-radius:8px;font-family:var(--fb);color:var(--dark2);background:var(--white);cursor:pointer;flex:1;outline:none">
+              <option value="pendiente" ${f.estado==='pendiente'?'selected':''}>⏸ Pendiente</option>
+              <option value="en_curso" ${f.estado==='en_curso'?'selected':''}>🔨 En curso</option>
+              <option value="completada" ${f.estado==='completada'?'selected':''}>✅ Completada</option>
+            </select>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -931,13 +965,22 @@ async function verProyecto(id) {
   showView('proyecto-detalle');
 }
 
-function toggleFase(id) {
-  const body = document.getElementById(id);
-  const idx = id.split('-')[1];
-  const chev = document.getElementById('chev-' + idx);
+function toggleFase(bodyId, chevId) {
+  const body = document.getElementById(bodyId);
+  const chev = document.getElementById(chevId);
   const isOpen = body.classList.contains('open');
   body.classList.toggle('open', !isOpen);
-  if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
+  if (chev) chev.classList.toggle('open', !isOpen);
+}
+
+async function cambiarEstadoTarea(tareaId, faseId) {
+  const estados = ['pendiente','en_curso','completada'];
+  const t = S.currentTareas.find(x => x.id === tareaId);
+  if (!t) return;
+  const idx = estados.indexOf(t.estado);
+  const nuevoEstado = estados[(idx+1) % 3];
+  await db.from('tareas').update({ estado: nuevoEstado }).eq('id', tareaId);
+  await verProyecto(S.currentProyecto.id);
 }
 
 function abrirTarea(faseId) {
