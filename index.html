@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Edifika</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Edifika">
+  <meta name="theme-color" content="#F59E0B">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --amber:#F59E0B;--amber-d:#D97706;--amber-l:#FEF3C7;
+      --dark:#1C1917;--dark2:#292524;
+      --s600:#57534E;--s400:#A8A29E;--s200:#E7E5E4;--s100:#F5F5F4;--s50:#FAFAF9;
+      --white:#FFFFFF;--green:#059669;--red:#DC2626;--blue:#2563EB;
+      --fd:'Outfit',sans-serif;--fb:'DM Sans',sans-serif;
+    }
+    body{font-family:var(--fb);background:var(--s50);color:var(--dark2);min-height:100vh;overflow-x:hidden}
+    .screen{display:none;min-height:100vh}
+    .screen.active{display:flex}
+
+    /* ── AUTH ── */
+    #screen-auth{
+      background:var(--dark);flex-direction:column;
+      align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden
+    }
+    #screen-auth::before{
+      content:'';position:absolute;width:500px;height:500px;
+      background:radial-gradient(circle,rgba(245,158,11,.12) 0%,transparent 70%);
+      top:-150px;right:-150px;pointer-events:none
+    }
+    .auth-logo{text-align:center;margin-bottom:36px}
+    .auth-logo h1{font-family:var(--fd);font-size:46px;font-weight:800;color:var(--amber);letter-spacing:-1.5px}
+    .auth-logo p{color:var(--s400);font-size:13px;margin-top:4px;letter-spacing:.3px}
+    .auth-card{
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+      border-radius:20px;padding:28px;width:100%;max-width:390px
+    }
+    .auth-tabs{display:flex;gap:4px;background:rgba(255,255,255,.06);border-radius:10px;padding:4px;margin-bottom:24px}
+    .auth-tab{flex:1;padding:8px;text-align:center;border-radius:8px;color:var(--s400);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;font-family:var(--fb)}
+    .auth-tab.active{background:var(--amber);color:var(--dark)}
+
+    /* ── ONBOARDING ── */
+    #screen-onboarding{background:var(--dark);flex-direction:column;align-items:center;justify-content:center;padding:24px}
+    .onboard-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:36px 28px;width:100%;max-width:420px;text-align:center}
+    .onboard-icon{width:64px;height:64px;background:rgba(245,158,11,.15);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:30px}
+    .onboard-card h2{font-family:var(--fd);font-size:24px;font-weight:700;color:var(--white);margin-bottom:8px}
+    .onboard-card p{color:var(--s400);font-size:14px;margin-bottom:24px;line-height:1.6}
+
+    /* ── FORMS ── */
+    .form-group{margin-bottom:14px}
+    .form-label{display:block;font-size:11px;font-weight:600;color:var(--s400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+    .form-input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:var(--white);font-size:15px;font-family:var(--fb);outline:none;transition:border .2s}
+    .form-input:focus{border-color:var(--amber)}
+    .form-input::placeholder{color:var(--s600)}
+    .form-input-light{width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--s200);background:var(--white);color:var(--dark2);font-size:15px;font-family:var(--fb);outline:none;transition:border .2s}
+    .form-input-light:focus{border-color:var(--amber)}
+    .form-label-light{display:block;font-size:13px;font-weight:500;color:var(--s600);margin-bottom:5px}
+    select.form-input-light{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23A8A29E' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer}
+
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:10px;font-size:15px;font-weight:600;font-family:var(--fb);cursor:pointer;border:none;transition:all .2s;text-decoration:none;-webkit-tap-highlight-color:transparent}
+    .btn-primary{background:var(--amber);color:var(--dark);width:100%}
+    .btn-primary:hover{background:var(--amber-d)}
+    .btn-primary:active{transform:scale(.98)}
+    .btn-secondary{background:var(--s100);color:var(--dark2)}
+    .btn-danger{background:#FEE2E2;color:var(--red)}
+    .btn-ghost{background:transparent;color:var(--s600);padding:7px 12px}
+    .btn-ghost:hover{background:var(--s100)}
+    .btn-sm{padding:8px 14px;font-size:13px}
+
+    /* ── ERROR / TOAST ── */
+    .error-msg{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);color:#F87171;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+    .error-msg.show{display:block}
+    #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark2);color:var(--white);padding:10px 22px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;z-index:400;white-space:nowrap;pointer-events:none}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* ── SPINNER ── */
+    .spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:var(--white);border-radius:50%;animation:spin .6s linear infinite}
+    .spinner-dark{border-color:rgba(0,0,0,.1);border-top-color:var(--dark)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── MAIN SCREEN ── */
+    #screen-main{flex-direction:column;min-height:100vh}
+    .topbar{background:var(--dark);display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.05)}
+    .topbar-logo{font-family:var(--fd);font-size:22px;font-weight:800;color:var(--amber);letter-spacing:-.5px;line-height:1}
+    .topbar-empresa{font-size:11px;color:var(--s400);display:block;margin-top:1px}
+    .avatar{width:32px;height:32px;border-radius:50%;background:var(--amber);color:var(--dark);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--fd);flex-shrink:0}
+    #app-content{flex:1;overflow-y:auto;padding:16px;padding-bottom:80px}
+    @media(min-width:640px){#app-content{max-width:600px;margin:0 auto;padding:20px 24px 100px}}
+
+    /* ── VIEWS ── */
+    .view{display:none}
+    .view.active{display:block}
+
+    /* ── PAGE HEADER ── */
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .page-title{font-family:var(--fd);font-size:22px;font-weight:700;color:var(--dark2)}
+    .page-subtitle{font-size:12px;color:var(--s400);margin-top:2px}
+
+    /* ── CARDS ── */
+    .card{background:var(--white);border-radius:14px;border:1px solid var(--s200);padding:16px;margin-bottom:12px}
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .section-title{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--dark2)}
+
+    /* ── METRICS ── */
+    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+    .metric-card{background:var(--white);border-radius:14px;border:1px solid var(--s200);padding:14px}
+    .metric-label{font-size:11px;font-weight:600;color:var(--s400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+    .metric-value{font-family:var(--fd);font-size:22px;font-weight:700;color:var(--dark2)}
+    .metric-value.green{color:var(--green)}
+    .metric-value.amber{color:var(--amber-d)}
+    .metric-value.red{color:var(--red)}
+    .metric-sub{font-size:11px;color:var(--s400);margin-top:2px}
+
+    /* ── PROYECTO CARDS ── */
+    .proyecto-card{background:var(--white);border-radius:14px;border:1px solid var(--s200);padding:14px;margin-bottom:10px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+    .proyecto-card:active{transform:scale(.99);border-color:var(--amber)}
+    .proyecto-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+    .proyecto-nombre{font-family:var(--fd);font-size:16px;font-weight:600;color:var(--dark2)}
+    .proyecto-ubicacion{font-size:12px;color:var(--s400);margin-top:2px}
+    .proyecto-meta{display:flex;gap:14px;flex-wrap:wrap}
+    .proyecto-meta-item{font-size:12px;color:var(--s600)}
+    .proyecto-meta-item strong{font-weight:600;color:var(--dark2)}
+
+    /* ── PROGRESS ── */
+    .progress-wrap{margin-top:10px}
+    .progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--s400);margin-bottom:4px}
+    .progress-bar{height:5px;background:var(--s100);border-radius:3px;overflow:hidden}
+    .progress-fill{height:100%;border-radius:3px;transition:width .4s}
+
+    /* ── BADGES ── */
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+    .badge-planificacion{background:#DBEAFE;color:#1D4ED8}
+    .badge-construccion{background:var(--amber-l);color:var(--amber-d)}
+    .badge-terminado{background:#D1FAE5;color:#065F46}
+    .badge-vendido{background:var(--s100);color:var(--s600)}
+    .badge-negociando{background:#FEF3C7;color:#92400E}
+    .badge-cerrada{background:#D1FAE5;color:#065F46}
+    .badge-escriturada{background:#DBEAFE;color:#1E40AF}
+
+    /* ── SUMMARY BAR ── */
+    .summary-bar{background:var(--dark);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+    .summary-label{font-size:11px;color:var(--s400);margin-bottom:3px}
+    .summary-value{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--white)}
+
+    /* ── GASTO ITEMS ── */
+    .gasto-item{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--s100)}
+    .gasto-item:last-child{border-bottom:none}
+    .gasto-left{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
+    .gasto-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+    .gasto-desc{font-size:14px;font-weight:500;color:var(--dark2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gasto-meta{font-size:11px;color:var(--s400);margin-top:1px}
+    .gasto-monto{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--red);white-space:nowrap;margin-left:10px}
+
+    /* ── VENTA ITEMS ── */
+    .venta-item{background:var(--white);border:1px solid var(--s200);border-radius:12px;padding:14px;margin-bottom:10px}
+    .venta-top{display:flex;justify-content:space-between;align-items:flex-start}
+    .venta-nombre{font-size:15px;font-weight:600;color:var(--dark2);font-family:var(--fd)}
+    .venta-proyecto{font-size:12px;color:var(--s400);margin-top:2px}
+    .venta-precio{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--green)}
+
+    /* ── FASES ── */
+    .fase-item{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--s100)}
+    .fase-item:last-child{border-bottom:none}
+    .fase-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+    .fase-dot.pendiente{background:var(--s200)}
+    .fase-dot.en_curso{background:var(--amber)}
+    .fase-dot.completada{background:var(--green)}
+    .fase-nombre{font-size:14px;font-weight:500;color:var(--dark2);flex:1}
+    .fase-select{border:1px solid var(--s200);padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;font-family:var(--fb);color:var(--dark2);background:var(--white);cursor:pointer;outline:none}
+
+    /* ── DETAIL HEADER ── */
+    .detail-header{background:var(--dark);margin:-16px -16px 16px;padding:14px 16px 18px}
+    .detail-back{display:inline-flex;align-items:center;gap:6px;color:var(--amber);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px;-webkit-tap-highlight-color:transparent}
+    .detail-title{font-family:var(--fd);font-size:22px;font-weight:700;color:var(--white)}
+    .detail-sub{font-size:12px;color:var(--s400);margin-top:3px}
+
+    /* ── FILTER PILLS ── */
+    .filter-pills{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+    .filter-pills::-webkit-scrollbar{display:none}
+    .pill{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--s200);background:var(--white);color:var(--s600);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+    .pill.active{background:var(--amber);border-color:var(--amber);color:var(--dark)}
+
+    /* ── BOTTOM NAV ── */
+    #bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--s200);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;gap:3px;-webkit-tap-highlight-color:transparent}
+    .nav-item span{font-size:10px;font-weight:500;color:var(--s400);transition:color .15s}
+    .nav-item svg{transition:stroke .15s}
+    .nav-item.active span{color:var(--amber-d)}
+    .nav-item.active svg{stroke:var(--amber-d) !important}
+
+    /* ── MODAL ── */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;backdrop-filter:blur(4px)}
+    .modal-overlay.show{display:flex}
+    .modal{background:var(--white);border-radius:20px 20px 0 0;width:100%;max-height:92vh;overflow-y:auto;padding:16px 20px 28px;animation:slideUp .3s ease}
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .modal-handle{width:36px;height:4px;background:var(--s200);border-radius:2px;margin:0 auto 18px}
+    .modal-title{font-family:var(--fd);font-size:19px;font-weight:700;color:var(--dark2);margin-bottom:18px}
+
+    /* ── DROPDOWN ── */
+    .dropdown{position:relative}
+    .dropdown-menu{display:none;position:absolute;right:0;top:42px;background:var(--white);border:1px solid var(--s200);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50;min-width:160px;overflow:hidden}
+    .dropdown-menu.show{display:block}
+    .dropdown-item{display:flex;align-items:center;gap:10px;padding:12px 16px;font-size:14px;color:var(--dark2);cursor:pointer;transition:background .1s}
+    .dropdown-item:hover{background:var(--s50)}
+    .dropdown-item.danger{color:var(--red)}
+
+    /* ── PERFIL ── */
+    .perfil-item{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--s100)}
+    .perfil-item:last-child{border-bottom:none}
+    .perfil-item-label{font-size:13px;color:var(--s600)}
+    .perfil-item-value{font-size:14px;font-weight:500;color:var(--dark2)}
+
+    /* ── EMPTY STATE ── */
+    .empty{text-align:center;padding:40px 20px}
+    .empty-icon{font-size:40px;margin-bottom:12px}
+    .empty h3{font-family:var(--fd);font-size:17px;font-weight:600;color:var(--dark2);margin-bottom:6px}
+    .empty p{font-size:13px;color:var(--s400);margin-bottom:18px}
+
+    .divider{height:1px;background:var(--s100);margin:14px 0}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ AUTH SCREEN ══ -->
+  <div id="screen-auth" class="screen">
+    <div class="auth-logo">
+      <h1>Edifika</h1>
+      <p>Gestión de proyectos de construcción</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Ingresar</div>
+        <div class="auth-tab" id="tab-register" onclick="switchTab('register')">Registrarse</div>
+      </div>
+      <div id="auth-error" class="error-msg"></div>
+
+      <div id="form-login">
+        <div class="form-group">
+          <label class="form-label">Correo electrónico</label>
+          <input type="email" id="login-email" class="form-input" placeholder="tu@correo.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')handleLogin()">
+        </div>
+        <button class="btn btn-primary" id="btn-login" onclick="handleLogin()">Ingresar</button>
+      </div>
+
+      <div id="form-register" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Nombre completo</label>
+          <input type="text" id="reg-nombre" class="form-input" placeholder="Pedro Sánchez">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Correo electrónico</label>
+          <input type="email" id="reg-email" class="form-input" placeholder="tu@correo.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input type="password" id="reg-password" class="form-input" placeholder="Mínimo 6 caracteres">
+        </div>
+        <button class="btn btn-primary" id="btn-register" onclick="handleRegister()">Crear cuenta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ONBOARDING SCREEN ══ -->
+  <div id="screen-onboarding" class="screen">
+    <div class="onboard-card">
+      <div class="onboard-icon">🏗️</div>
+      <h2>¡Bienvenido a Edifika!</h2>
+      <p>Para comenzar, ingresa el nombre de tu empresa o constructora.</p>
+      <div id="onboard-error" class="error-msg"></div>
+      <div class="form-group" style="text-align:left">
+        <label class="form-label">Nombre de la empresa</label>
+        <input type="text" id="empresa-nombre" class="form-input" placeholder="Ej: Constructora Vaca Salazar" onkeydown="if(event.key==='Enter')handleCreateEmpresa()">
+      </div>
+      <button class="btn btn-primary" id="btn-empresa" onclick="handleCreateEmpresa()">Comenzar →</button>
+    </div>
+  </div>
+
+  <!-- ══ MAIN SCREEN ══ -->
+  <div id="screen-main" class="screen" style="flex-direction:column">
+
+    <div class="topbar">
+      <div>
+        <div class="topbar-logo">Edifika</div>
+        <span class="topbar-empresa" id="topbar-empresa"></span>
+      </div>
+      <div class="dropdown">
+        <div class="avatar" id="user-avatar" onclick="toggleDropdown()">D</div>
+        <div class="dropdown-menu" id="user-dropdown">
+          <div class="dropdown-item" onclick="navTo('perfil');toggleDropdown(true)">👤 Mi perfil</div>
+          <div class="dropdown-item danger" onclick="handleLogout()">🚪 Cerrar sesión</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="app-content">
+
+      <!-- DASHBOARD -->
+      <div id="view-dashboard" class="view">
+        <div class="page-header">
+          <div>
+            <div class="page-title" id="dashboard-greeting">Bienvenido</div>
+            <div class="page-subtitle">Resumen general del negocio</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Proyecto</button>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Activos</div>
+            <div class="metric-value amber" id="m-activos">—</div>
+            <div class="metric-sub">proyectos en curso</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total invertido</div>
+            <div class="metric-value" id="m-invertido">—</div>
+            <div class="metric-sub">en todos los proyectos</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Ingresos</div>
+            <div class="metric-value green" id="m-ingresos">—</div>
+            <div class="metric-sub">ventas cerradas</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Utilidad</div>
+            <div class="metric-value" id="m-utilidad">—</div>
+            <div class="metric-sub" id="m-utilidad-sub"></div>
+          </div>
+        </div>
+        <div class="section-header">
+          <div class="section-title">Proyectos recientes</div>
+          <button class="btn btn-ghost btn-sm" onclick="navTo('proyectos')">Ver todos</button>
+        </div>
+        <div id="dash-proyectos"></div>
+      </div>
+
+      <!-- PROYECTOS -->
+      <div id="view-proyectos" class="view">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Proyectos</div>
+            <div class="page-subtitle" id="proyectos-count"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo</button>
+        </div>
+        <div class="filter-pills">
+          <div class="pill active" onclick="filtrarProyectos('todos',this)">Todos</div>
+          <div class="pill" onclick="filtrarProyectos('planificacion',this)">Planificación</div>
+          <div class="pill" onclick="filtrarProyectos('construccion',this)">Construcción</div>
+          <div class="pill" onclick="filtrarProyectos('terminado',this)">Terminados</div>
+          <div class="pill" onclick="filtrarProyectos('vendido',this)">Vendidos</div>
+        </div>
+        <div id="lista-proyectos"></div>
+      </div>
+
+      <!-- PROYECTO DETALLE -->
+      <div id="view-proyecto-detalle" class="view">
+        <div class="detail-header">
+          <div class="detail-back" onclick="showView('proyectos')">← Volver</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="flex:1;min-width:0;margin-right:10px">
+              <div class="detail-title" id="det-nombre"></div>
+              <div class="detail-sub" id="det-ubicacion"></div>
+            </div>
+            <div id="det-badge"></div>
+          </div>
+        </div>
+
+        <div class="summary-bar">
+          <div><div class="summary-label">Total gastado</div><div class="summary-value" id="det-gasto">$0</div></div>
+          <div style="text-align:center"><div class="summary-label">Presupuesto</div><div class="summary-value" id="det-presupuesto">—</div></div>
+          <div style="text-align:right"><div class="summary-label">Balance</div><div class="summary-value" id="det-balance" style="font-size:15px">—</div></div>
+        </div>
+
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">Fases de la obra</div>
+            <button class="btn btn-ghost btn-sm" onclick="openModal('modal-fase')">+ Agregar</button>
+          </div>
+          <div id="det-fases"><p style="font-size:13px;color:var(--s400)">Sin fases registradas.</p></div>
+        </div>
+
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">Últimos gastos</div>
+            <button class="btn btn-ghost btn-sm" onclick="abrirGasto()">+ Registrar</button>
+          </div>
+          <div id="det-gastos"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">Venta</div>
+            <button class="btn btn-ghost btn-sm" id="btn-nueva-venta" onclick="abrirVenta()">+ Registrar</button>
+          </div>
+          <div id="det-venta"><p style="font-size:13px;color:var(--s400)">Sin venta registrada.</p></div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:4px;margin-bottom:8px">
+          <button class="btn btn-secondary" style="flex:1" onclick="editarProyectoActual()">✏️ Editar</button>
+          <button class="btn btn-danger" style="flex:1" onclick="eliminarProyectoActual()">🗑️ Eliminar</button>
+        </div>
+      </div>
+
+      <!-- GASTOS -->
+      <div id="view-gastos" class="view">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Gastos</div>
+            <div class="page-subtitle">Todos los proyectos</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="abrirGasto()">+ Nuevo</button>
+        </div>
+        <div class="filter-pills" id="gastos-pills">
+          <div class="pill active" onclick="filtrarGastos('todos',this)">Todos</div>
+          <div class="pill" onclick="filtrarGastos('materiales',this)">🧱 Materiales</div>
+          <div class="pill" onclick="filtrarGastos('mano_obra',this)">👷 Mano de obra</div>
+          <div class="pill" onclick="filtrarGastos('permisos',this)">📋 Permisos</div>
+          <div class="pill" onclick="filtrarGastos('transporte',this)">🚛 Transporte</div>
+          <div class="pill" onclick="filtrarGastos('imprevistos',this)">⚠️ Imprevistos</div>
+          <div class="pill" onclick="filtrarGastos('otros',this)">📦 Otros</div>
+        </div>
+        <div class="summary-bar">
+          <div><div class="summary-label">Total gastado</div><div class="summary-value" id="gastos-total">$0</div></div>
+          <div style="text-align:right"><div class="summary-label">Registros</div><div class="summary-value" id="gastos-count">0</div></div>
+        </div>
+        <div id="lista-gastos"></div>
+      </div>
+
+      <!-- VENTAS -->
+      <div id="view-ventas" class="view">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Ventas</div>
+            <div class="page-subtitle" id="ventas-sub"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="abrirVenta()">+ Nueva</button>
+        </div>
+        <div class="summary-bar">
+          <div><div class="summary-label">Ingresos totales</div><div class="summary-value" id="ventas-total">$0</div></div>
+          <div style="text-align:right"><div class="summary-label">Ventas cerradas</div><div class="summary-value" id="ventas-cerradas">0</div></div>
+        </div>
+        <div id="lista-ventas"></div>
+      </div>
+
+      <!-- PERFIL -->
+      <div id="view-perfil" class="view">
+        <div class="page-header"><div class="page-title">Mi perfil</div></div>
+        <div class="card">
+          <div style="text-align:center;padding:4px 0 16px">
+            <div id="perfil-av" style="width:68px;height:68px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:30px;font-weight:700;color:var(--dark);margin:0 auto 10px">D</div>
+            <div id="perfil-nombre" style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--dark2)"></div>
+            <div id="perfil-rol" style="font-size:12px;color:var(--s400);margin-top:2px"></div>
+          </div>
+          <div class="divider"></div>
+          <div class="perfil-item"><span class="perfil-item-label">Empresa</span><span class="perfil-item-value" id="perfil-empresa"></span></div>
+          <div class="perfil-item"><span class="perfil-item-label">Plan</span><span class="perfil-item-value"><span class="badge badge-construccion" id="perfil-plan">Free</span></span></div>
+          <div class="perfil-item"><span class="perfil-item-label">Email</span><span class="perfil-item-value" id="perfil-email" style="font-size:13px"></span></div>
+        </div>
+        <button class="btn" style="background:var(--dark);color:var(--white);width:100%;margin-top:4px" onclick="handleLogout()">🚪 Cerrar sesión</button>
+      </div>
+
+    </div><!-- /app-content -->
+
+    <!-- BOTTOM NAV -->
+    <nav id="bottom-nav">
+      <div class="nav-item active" id="nav-dashboard" onclick="navTo('dashboard')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Inicio</span>
+      </div>
+      <div class="nav-item" id="nav-proyectos" onclick="navTo('proyectos')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Proyectos</span>
+      </div>
+      <div class="nav-item" id="nav-gastos" onclick="navTo('gastos')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <span>Gastos</span>
+      </div>
+      <div class="nav-item" id="nav-ventas" onclick="navTo('ventas')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        <span>Ventas</span>
+      </div>
+      <div class="nav-item" id="nav-perfil" onclick="navTo('perfil')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Perfil</span>
+      </div>
+    </nav>
+
+  </div><!-- /screen-main -->
+</div><!-- /app -->
+
+<!-- ══ MODALS ══ -->
+
+<!-- Modal Proyecto -->
+<div class="modal-overlay" id="modal-proyecto">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mp-title">Nuevo proyecto</div>
+    <input type="hidden" id="mp-edit-id">
+    <div class="form-group"><label class="form-label-light">Nombre del proyecto *</label><input type="text" id="mp-nombre" class="form-input-light" placeholder="Ej: Casa Familia García"></div>
+    <div class="form-group"><label class="form-label-light">Ubicación</label><input type="text" id="mp-ubicacion" class="form-input-light" placeholder="Ej: Calle Los Ceibos, Ibarra"></div>
+    <div class="form-group"><label class="form-label-light">Estado</label>
+      <select id="mp-estado" class="form-input-light">
+        <option value="planificacion">Planificación</option>
+        <option value="construccion">En construcción</option>
+        <option value="terminado">Terminado</option>
+        <option value="vendido">Vendido</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label-light">Presupuesto estimado ($)</label><input type="number" id="mp-presupuesto" class="form-input-light" placeholder="0.00"></div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Fecha inicio</label><input type="date" id="mp-inicio" class="form-input-light"></div>
+      <div class="form-group"><label class="form-label-light">Fecha entrega</label><input type="date" id="mp-entrega" class="form-input-light"></div>
+    </div>
+    <div id="mp-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-proyecto')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-mp" onclick="guardarProyecto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Gasto -->
+<div class="modal-overlay" id="modal-gasto">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Registrar gasto</div>
+    <div class="form-group"><label class="form-label-light">Proyecto *</label><select id="mg-proyecto" class="form-input-light"></select></div>
+    <div class="form-group"><label class="form-label-light">Descripción *</label><input type="text" id="mg-desc" class="form-input-light" placeholder="Ej: Compra de cemento"></div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Monto ($) *</label><input type="number" id="mg-monto" class="form-input-light" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label-light">Fecha *</label><input type="date" id="mg-fecha" class="form-input-light"></div>
+    </div>
+    <div class="form-group"><label class="form-label-light">Categoría</label>
+      <select id="mg-cat" class="form-input-light">
+        <option value="materiales">🧱 Materiales</option>
+        <option value="mano_obra">👷 Mano de obra</option>
+        <option value="permisos">📋 Permisos y trámites</option>
+        <option value="transporte">🚛 Transporte</option>
+        <option value="imprevistos">⚠️ Imprevistos</option>
+        <option value="otros">📦 Otros</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label-light">N° de factura / Comprobante</label><input type="text" id="mg-comp" class="form-input-light" placeholder="Opcional"></div>
+    <div id="mg-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-gasto')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-mg" onclick="guardarGasto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Venta -->
+<div class="modal-overlay" id="modal-venta">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Registrar venta</div>
+    <div class="form-group"><label class="form-label-light">Proyecto *</label><select id="mv-proyecto" class="form-input-light"></select></div>
+    <div class="form-group"><label class="form-label-light">Nombre del comprador *</label><input type="text" id="mv-comprador" class="form-input-light" placeholder="Nombre completo"></div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Cédula</label><input type="text" id="mv-cedula" class="form-input-light" placeholder="0000000000"></div>
+      <div class="form-group"><label class="form-label-light">Teléfono</label><input type="text" id="mv-tel" class="form-input-light" placeholder="0990000000"></div>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Precio de venta ($) *</label><input type="number" id="mv-precio" class="form-input-light" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label-light">Fecha de cierre</label><input type="date" id="mv-fecha" class="form-input-light"></div>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Forma de pago</label>
+        <select id="mv-forma" class="form-input-light">
+          <option value="contado">Contado</option>
+          <option value="credito_directo">Crédito directo</option>
+          <option value="hipotecario">Hipotecario</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label-light">Estado</label>
+        <select id="mv-estado" class="form-input-light">
+          <option value="negociando">Negociando</option>
+          <option value="cerrada">Cerrada</option>
+          <option value="escriturada">Escriturada</option>
+        </select>
+      </div>
+    </div>
+    <div id="mv-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-venta')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-mv" onclick="guardarVenta()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Fase -->
+<div class="modal-overlay" id="modal-fase">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Agregar fase</div>
+    <div class="form-group"><label class="form-label-light">Nombre de la fase *</label><input type="text" id="mf-nombre" class="form-input-light" placeholder="Ej: Cimentación"></div>
+    <div class="form-group"><label class="form-label-light">Estado inicial</label>
+      <select id="mf-estado" class="form-input-light">
+        <option value="pendiente">Pendiente</option>
+        <option value="en_curso">En curso</option>
+        <option value="completada">Completada</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-fase')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-mf" onclick="guardarFase()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════════════════
+const SURL = 'https://qrqkonzlljmdstxlnpyv.supabase.co';
+const SKEY = 'sb_publishable_WCDe9-0rdXULeFL7T5AgmA_lneH-FbT';
+const db = supabase.createClient(SURL, SKEY);
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let S = {
+  user: null, profile: null, empresa: null,
+  proyectos: [], gastos: [], ventas: [],
+  currentProyecto: null,
+  pfiltro: 'todos', gfiltro: 'todos'
+};
+
+// ══════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  setupPWA();
+  const { data: { session } } = await db.auth.getSession();
+  if (session) { S.user = session.user; await iniciar(); }
+  else showScreen('auth');
+
+  db.auth.onAuthStateChange(async (ev, ses) => {
+    if (ev === 'SIGNED_IN' && ses) { S.user = ses.user; await iniciar(); }
+    if (ev === 'SIGNED_OUT') { S = { user:null,profile:null,empresa:null,proyectos:[],gastos:[],ventas:[],currentProyecto:null,pfiltro:'todos',gfiltro:'todos' }; showScreen('auth'); }
+  });
+});
+
+function setupPWA() {
+  const m = { name:'Edifika', short_name:'Edifika', start_url:'/', display:'standalone',
+    background_color:'#1C1917', theme_color:'#F59E0B',
+    icons:[{ src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23F59E0B'/%3E%3Ctext y='.85em' font-size='72' x='14'%3E🏗%3C/text%3E%3C/svg%3E", sizes:'192x192', type:'image/svg+xml' }]
+  };
+  const lnk = document.createElement('link');
+  lnk.rel = 'manifest';
+  lnk.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type:'application/json' }));
+  document.head.appendChild(lnk);
+}
+
+// ══════════════════════════════════════════════
+// INICIAR (post-login)
+// ══════════════════════════════════════════════
+async function iniciar() {
+  try {
+    const { data: profile } = await db.from('profiles').select('*, empresas(*)').eq('id', S.user.id).single();
+
+    if (!profile) {
+      await db.from('profiles').insert({ id: S.user.id, nombre: S.user.user_metadata?.nombre || S.user.email.split('@')[0] });
+      showScreen('onboarding'); return;
+    }
+
+    S.profile = profile;
+    if (!profile.empresa_id) { showScreen('onboarding'); return; }
+
+    S.empresa = profile.empresas;
+    actualizarUI();
+    await Promise.all([cargarProyectos(), cargarGastos(), cargarVentas()]);
+    showScreen('main');
+    navTo('dashboard');
+  } catch (e) { console.error(e); toast('Error al cargar'); }
+}
+
+function actualizarUI() {
+  const ini = (S.profile.nombre || 'U')[0].toUpperCase();
+  document.getElementById('topbar-empresa').textContent = S.empresa.nombre;
+  document.getElementById('user-avatar').textContent = ini;
+  document.getElementById('perfil-av').textContent = ini;
+  document.getElementById('perfil-nombre').textContent = S.profile.nombre;
+  document.getElementById('perfil-rol').textContent = capFirst(S.profile.rol || 'admin');
+  document.getElementById('perfil-empresa').textContent = S.empresa.nombre;
+  document.getElementById('perfil-plan').textContent = capFirst(S.empresa.plan || 'free');
+  document.getElementById('perfil-email').textContent = S.user.email;
+}
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+function switchTab(tab) {
+  ['login','register'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+    document.getElementById(`form-${t}`).style.display = t === tab ? 'block' : 'none';
+  });
+  hideErr('auth-error');
+}
+
+async function handleLogin() {
+  const email = v('login-email'), pwd = v('login-password');
+  if (!email || !pwd) return showErr('auth-error', 'Completa todos los campos');
+  setLoading('btn-login', true);
+  const { error } = await db.auth.signInWithPassword({ email, password: pwd });
+  setLoading('btn-login', false);
+  if (error) showErr('auth-error', 'Correo o contraseña incorrectos');
+}
+
+async function handleRegister() {
+  const nombre = v('reg-nombre'), email = v('reg-email'), pwd = v('reg-password');
+  if (!nombre || !email || !pwd) return showErr('auth-error', 'Completa todos los campos');
+  if (pwd.length < 6) return showErr('auth-error', 'La contraseña debe tener al menos 6 caracteres');
+  setLoading('btn-register', true);
+  const { error } = await db.auth.signUp({ email, password: pwd, options: { data: { nombre } } });
+  setLoading('btn-register', false);
+  if (error) showErr('auth-error', error.message.includes('already') ? 'Este correo ya está registrado' : error.message);
+  else toast('¡Cuenta creada! Revisa tu correo para verificar');
+}
+
+async function handleLogout() {
+  toggleDropdown(true);
+  await db.auth.signOut();
+}
+
+// ══════════════════════════════════════════════
+// ONBOARDING
+// ══════════════════════════════════════════════
+async function handleCreateEmpresa() {
+  const nombre = v('empresa-nombre');
+  if (!nombre) return showErr('onboard-error', 'Ingresa el nombre de tu empresa');
+  setLoading('btn-empresa', true);
+  const { data: emp, error: e1 } = await db.from('empresas').insert({ nombre, plan:'free' }).select().single();
+  if (e1) { setLoading('btn-empresa', false); return showErr('onboard-error', 'Error al crear empresa'); }
+  const { error: e2 } = await db.from('profiles').update({ empresa_id: emp.id, rol:'admin' }).eq('id', S.user.id);
+  setLoading('btn-empresa', false);
+  if (e2) return showErr('onboard-error', 'Error al configurar perfil');
+  await iniciar();
+}
+
+// ══════════════════════════════════════════════
+// PROYECTOS
+// ══════════════════════════════════════════════
+async function cargarProyectos() {
+  const { data } = await db.from('proyectos').select('*').eq('empresa_id', S.empresa.id).order('created_at', { ascending:false });
+  S.proyectos = data || [];
+}
+
+function renderProyectos(list) {
+  const el = document.getElementById('lista-proyectos');
+  if (!list.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><h3>Sin proyectos aún</h3><p>Crea tu primer proyecto para comenzar</p><button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo proyecto</button></div>`; return; }
+  el.innerHTML = list.map(p => {
+    const total = S.gastos.filter(g => g.proyecto_id === p.id).reduce((a,b) => a + +b.monto, 0);
+    const pct = p.presupuesto > 0 ? Math.min((total / p.presupuesto) * 100, 100) : 0;
+    const over = p.presupuesto > 0 && total > p.presupuesto;
+    return `<div class="proyecto-card" onclick="verProyecto('${p.id}')">
+      <div class="proyecto-card-top">
+        <div style="flex:1;min-width:0;margin-right:8px">
+          <div class="proyecto-nombre">${p.nombre}</div>
+          ${p.ubicacion ? `<div class="proyecto-ubicacion">📍 ${p.ubicacion}</div>` : ''}
+        </div>
+        <span class="badge badge-${p.estado}">${elabel(p.estado)}</span>
+      </div>
+      <div class="proyecto-meta">
+        <div class="proyecto-meta-item">Gastado: <strong>${fmt(total)}</strong></div>
+        ${p.presupuesto ? `<div class="proyecto-meta-item">Presupuesto: <strong>${fmt(p.presupuesto)}</strong></div>` : ''}
+      </div>
+      ${p.presupuesto ? `<div class="progress-wrap"><div class="progress-label"><span>Ejecución</span><span style="color:${over?'var(--red)':'inherit'}">${pct.toFixed(0)}%${over?' ⚠️':''}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${over?'var(--red)':'var(--amber)'}"></div></div></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function filtrarProyectos(f, el) {
+  S.pfiltro = f;
+  document.querySelectorAll('#view-proyectos .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderProyectos(f === 'todos' ? S.proyectos : S.proyectos.filter(p => p.estado === f));
+}
+
+async function verProyecto(id) {
+  const p = S.proyectos.find(x => x.id === id);
+  if (!p) return;
+  S.currentProyecto = p;
+
+  const { data: fases } = await db.from('fases').select('*').eq('proyecto_id', id).order('orden');
+
+  document.getElementById('det-nombre').textContent = p.nombre;
+  document.getElementById('det-ubicacion').textContent = p.ubicacion || '';
+  document.getElementById('det-badge').innerHTML = `<span class="badge badge-${p.estado}">${elabel(p.estado)}</span>`;
+
+  const gastosP = S.gastos.filter(g => g.proyecto_id === id);
+  const total = gastosP.reduce((a,b) => a + +b.monto, 0);
+  document.getElementById('det-gasto').textContent = fmt(total);
+  document.getElementById('det-presupuesto').textContent = p.presupuesto ? fmt(p.presupuesto) : '—';
+
+  const balEl = document.getElementById('det-balance');
+  if (p.presupuesto) {
+    const bal = p.presupuesto - total;
+    balEl.textContent = bal >= 0 ? `${fmt(bal)} disp.` : `${fmt(Math.abs(bal))} exceso`;
+    balEl.style.color = bal >= 0 ? 'var(--green)' : 'var(--red)';
+  } else { balEl.textContent = '—'; balEl.style.color = 'var(--white)'; }
+
+  // Fases
+  const fasEl = document.getElementById('det-fases');
+  fasEl.innerHTML = fases && fases.length ? fases.map(f => `
+    <div class="fase-item">
+      <div class="fase-dot ${f.estado}"></div>
+      <div class="fase-nombre">${f.nombre}</div>
+      <select class="fase-select" onchange="updateFase('${f.id}',this.value)">
+        <option value="pendiente" ${f.estado==='pendiente'?'selected':''}>Pendiente</option>
+        <option value="en_curso" ${f.estado==='en_curso'?'selected':''}>En curso</option>
+        <option value="completada" ${f.estado==='completada'?'selected':''}>Completada</option>
+      </select>
+    </div>`).join('') : '<p style="font-size:13px;color:var(--s400);padding:4px 0">Sin fases registradas.</p>';
+
+  // Gastos (últimos 5)
+  const gEl = document.getElementById('det-gastos');
+  const ult = gastosP.slice(0, 5);
+  gEl.innerHTML = ult.length ? ult.map(g => gastoHTML(g, false)).join('') : '<p style="font-size:13px;color:var(--s400);padding:4px 0">Sin gastos registrados aún.</p>';
+
+  // Venta
+  const venta = S.ventas.find(v => v.proyecto_id === id);
+  const vEl = document.getElementById('det-venta');
+  document.getElementById('btn-nueva-venta').style.display = venta ? 'none' : '';
+  vEl.innerHTML = venta ? `<div style="display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--green)">${fmt(venta.precio)}</div>
+    <div style="font-size:12px;color:var(--s400);margin-top:2px">${venta.comprador_nombre} · ${flabel(venta.forma_pago)}</div></div>
+    <span class="badge badge-${venta.estado}">${vlabel(venta.estado)}</span></div>` :
+    '<p style="font-size:13px;color:var(--s400)">Sin venta registrada para este proyecto.</p>';
+
+  showView('proyecto-detalle');
+}
+
+function editarProyectoActual() {
+  const p = S.currentProyecto;
+  document.getElementById('mp-title').textContent = 'Editar proyecto';
+  document.getElementById('mp-edit-id').value = p.id;
+  document.getElementById('mp-nombre').value = p.nombre;
+  document.getElementById('mp-ubicacion').value = p.ubicacion || '';
+  document.getElementById('mp-estado').value = p.estado;
+  document.getElementById('mp-presupuesto').value = p.presupuesto || '';
+  document.getElementById('mp-inicio').value = p.fecha_inicio || '';
+  document.getElementById('mp-entrega').value = p.fecha_entrega || '';
+  openModal('modal-proyecto');
+}
+
+async function eliminarProyectoActual() {
+  if (!confirm(`¿Eliminar "${S.currentProyecto.nombre}"? Esta acción no se puede deshacer.`)) return;
+  await db.from('proyectos').delete().eq('id', S.currentProyecto.id);
+  toast('Proyecto eliminado');
+  await cargarProyectos(); await cargarGastos(); await cargarVentas();
+  navTo('proyectos');
+}
+
+async function guardarProyecto() {
+  const nombre = v('mp-nombre');
+  if (!nombre) return showErr('mp-error', 'El nombre es obligatorio');
+  const editId = v('mp-edit-id');
+  const data = { nombre, ubicacion: v('mp-ubicacion') || null, estado: v('mp-estado'), presupuesto: parseFloat(v('mp-presupuesto')) || 0, fecha_inicio: v('mp-inicio') || null, fecha_entrega: v('mp-entrega') || null, empresa_id: S.empresa.id };
+  setLoading('btn-mp', true);
+  if (editId) { await db.from('proyectos').update(data).eq('id', editId); toast('Proyecto actualizado ✓'); }
+  else { await db.from('proyectos').insert(data); toast('Proyecto creado ✓'); }
+  setLoading('btn-mp', false);
+  closeModal('modal-proyecto');
+  await cargarProyectos();
+  renderProyectos(S.proyectos);
+  renderDashboard();
+}
+
+// ══════════════════════════════════════════════
+// FASES
+// ══════════════════════════════════════════════
+async function updateFase(id, estado) {
+  await db.from('fases').update({ estado }).eq('id', id);
+  await verProyecto(S.currentProyecto.id);
+}
+
+async function guardarFase() {
+  const nombre = v('mf-nombre');
+  if (!nombre) return;
+  setLoading('btn-mf', true);
+  await db.from('fases').insert({ proyecto_id: S.currentProyecto.id, nombre, estado: v('mf-estado'), orden: 99 });
+  setLoading('btn-mf', false);
+  closeModal('modal-fase');
+  document.getElementById('mf-nombre').value = '';
+  toast('Fase agregada ✓');
+  await verProyecto(S.currentProyecto.id);
+}
+
+// ══════════════════════════════════════════════
+// GASTOS
+// ══════════════════════════════════════════════
+async function cargarGastos() {
+  const { data } = await db.from('gastos').select('*').eq('empresa_id', S.empresa.id).order('fecha', { ascending:false });
+  S.gastos = data || [];
+}
+
+function gastoHTML(g, showProy = true) {
+  const icons = { materiales:'🧱', mano_obra:'👷', permisos:'📋', transporte:'🚛', imprevistos:'⚠️', otros:'📦' };
+  const bgs = { materiales:'#FEF3C7', mano_obra:'#EDE9FE', permisos:'#DBEAFE', transporte:'#D1FAE5', imprevistos:'#FEE2E2', otros:'#F3F4F6' };
+  const proy = showProy ? S.proyectos.find(p => p.id === g.proyecto_id) : null;
+  return `<div class="gasto-item">
+    <div class="gasto-left">
+      <div class="gasto-icon" style="background:${bgs[g.categoria]||'#F3F4F6'}">${icons[g.categoria]||'📦'}</div>
+      <div style="min-width:0">
+        <div class="gasto-desc">${g.descripcion}</div>
+        <div class="gasto-meta">${proy?proy.nombre+' · ':''}${fdate(g.fecha)}</div>
+      </div>
+    </div>
+    <div class="gasto-monto">−${fmt(g.monto)}</div>
+  </div>`;
+}
+
+function renderGastos(list) {
+  const total = list.reduce((a,b) => a + +b.monto, 0);
+  document.getElementById('gastos-total').textContent = fmt(total);
+  document.getElementById('gastos-count').textContent = list.length;
+  const el = document.getElementById('lista-gastos');
+  if (!list.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">💸</div><h3>Sin gastos</h3><p>Registra el primer gasto de un proyecto</p></div>`; return; }
+  el.innerHTML = `<div class="card" style="padding:0 16px">${list.map(g => gastoHTML(g)).join('')}</div>`;
+}
+
+function filtrarGastos(f, el) {
+  S.gfiltro = f;
+  document.querySelectorAll('#gastos-pills .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderGastos(f === 'todos' ? S.gastos : S.gastos.filter(g => g.categoria === f));
+}
+
+function abrirGasto() {
+  const sel = document.getElementById('mg-proyecto');
+  sel.innerHTML = S.proyectos.map(p => `<option value="${p.id}" ${p.id === S.currentProyecto?.id ? 'selected':''}>${p.nombre}</option>`).join('');
+  document.getElementById('mg-fecha').value = new Date().toISOString().split('T')[0];
+  ['mg-desc','mg-monto','mg-comp'].forEach(id => document.getElementById(id).value = '');
+  openModal('modal-gasto');
+}
+
+async function guardarGasto() {
+  const desc = v('mg-desc'), monto = parseFloat(v('mg-monto')), fecha = v('mg-fecha');
+  if (!desc || !monto || !fecha) return showErr('mg-error', 'Completa los campos obligatorios');
+  setLoading('btn-mg', true);
+  await db.from('gastos').insert({ proyecto_id: v('mg-proyecto'), empresa_id: S.empresa.id, descripcion: desc, monto, fecha, categoria: v('mg-cat'), comprobante: v('mg-comp') || null });
+  setLoading('btn-mg', false);
+  closeModal('modal-gasto');
+  toast('Gasto registrado ✓');
+  await cargarGastos();
+  renderGastos(S.gastos);
+  renderDashboard();
+  if (S.currentProyecto) await verProyecto(S.currentProyecto.id);
+}
+
+// ══════════════════════════════════════════════
+// VENTAS
+// ══════════════════════════════════════════════
+async function cargarVentas() {
+  const { data } = await db.from('ventas').select('*').eq('empresa_id', S.empresa.id).order('created_at', { ascending:false });
+  S.ventas = data || [];
+}
+
+function renderVentas() {
+  const cerradas = S.ventas.filter(v => v.estado !== 'negociando');
+  const total = cerradas.reduce((a,b) => a + +b.precio, 0);
+  document.getElementById('ventas-total').textContent = fmt(total);
+  document.getElementById('ventas-cerradas').textContent = cerradas.length;
+  document.getElementById('ventas-sub').textContent = `${S.ventas.length} venta${S.ventas.length !== 1 ? 's' : ''} registrada${S.ventas.length !== 1 ? 's' : ''}`;
+  const el = document.getElementById('lista-ventas');
+  if (!S.ventas.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">🏠</div><h3>Sin ventas aún</h3><p>Registra la primera venta de un proyecto</p></div>`; return; }
+  el.innerHTML = S.ventas.map(v => {
+    const proy = S.proyectos.find(p => p.id === v.proyecto_id);
+    return `<div class="venta-item">
+      <div class="venta-top">
+        <div>
+          <div class="venta-nombre">${v.comprador_nombre}</div>
+          <div class="venta-proyecto">${proy?proy.nombre:''} · ${flabel(v.forma_pago)}</div>
+          ${v.fecha_cierre?`<div style="font-size:11px;color:var(--s400);margin-top:2px">${fdate(v.fecha_cierre)}</div>`:''}
+        </div>
+        <div style="text-align:right">
+          <div class="venta-precio">${fmt(v.precio)}</div>
+          <span class="badge badge-${v.estado}" style="margin-top:4px;display:inline-flex">${vlabel(v.estado)}</span>
+        </div>
+      </div>
+      ${v.comprador_cedula||v.comprador_telefono?`<div style="display:flex;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--s100)">
+        ${v.comprador_cedula?`<span style="font-size:12px;color:var(--s600)">CI: ${v.comprador_cedula}</span>`:''}
+        ${v.comprador_telefono?`<span style="font-size:12px;color:var(--s600)">📞 ${v.comprador_telefono}</span>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function abrirVenta() {
+  const sel = document.getElementById('mv-proyecto');
+  sel.innerHTML = S.proyectos.map(p => `<option value="${p.id}" ${p.id === S.currentProyecto?.id ? 'selected':''}>${p.nombre}</option>`).join('');
+  ['mv-comprador','mv-cedula','mv-tel','mv-precio'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mv-fecha').value = new Date().toISOString().split('T')[0];
+  openModal('modal-venta');
+}
+
+async function guardarVenta() {
+  const comprador = v('mv-comprador'), precio = parseFloat(v('mv-precio'));
+  if (!comprador || !precio) return showErr('mv-error', 'Completa los campos obligatorios');
+  setLoading('btn-mv', true);
+  await db.from('ventas').insert({ proyecto_id: v('mv-proyecto'), empresa_id: S.empresa.id, comprador_nombre: comprador, comprador_cedula: v('mv-cedula') || null, comprador_telefono: v('mv-tel') || null, precio, forma_pago: v('mv-forma'), fecha_cierre: v('mv-fecha') || null, estado: v('mv-estado') });
+  setLoading('btn-mv', false);
+  closeModal('modal-venta');
+  toast('Venta registrada ✓');
+  await cargarVentas();
+  renderVentas();
+  renderDashboard();
+  if (S.currentProyecto) await verProyecto(S.currentProyecto.id);
+}
+
+// ══════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════
+function renderDashboard() {
+  const h = new Date().getHours();
+  const saludo = h < 12 ? 'Buenos días' : h < 18 ? 'Buenas tardes' : 'Buenas noches';
+  document.getElementById('dashboard-greeting').textContent = `${saludo}, ${(S.profile?.nombre||'').split(' ')[0]}`;
+
+  const activos = S.proyectos.filter(p => ['planificacion','construccion'].includes(p.estado)).length;
+  const invertido = S.gastos.reduce((a,b) => a + +b.monto, 0);
+  const cerradas = S.ventas.filter(v => v.estado !== 'negociando');
+  const ingresos = cerradas.reduce((a,b) => a + +b.precio, 0);
+  const utilidad = ingresos - invertido;
+
+  document.getElementById('m-activos').textContent = activos;
+  document.getElementById('m-invertido').textContent = fmt(invertido);
+  document.getElementById('m-ingresos').textContent = fmt(ingresos);
+  const uEl = document.getElementById('m-utilidad');
+  const uSub = document.getElementById('m-utilidad-sub');
+  uEl.textContent = fmt(Math.abs(utilidad));
+  uEl.className = 'metric-value ' + (utilidad >= 0 ? 'green' : 'red');
+  uSub.textContent = utilidad >= 0 ? 'ganancia estimada' : 'déficit actual';
+
+  const dp = document.getElementById('dash-proyectos');
+  const recent = S.proyectos.slice(0, 3);
+  if (!recent.length) { dp.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><h3>Sin proyectos</h3><p>Empieza creando tu primer proyecto</p><button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo proyecto</button></div>`; return; }
+  dp.innerHTML = recent.map(p => {
+    const total = S.gastos.filter(g => g.proyecto_id === p.id).reduce((a,b) => a + +b.monto, 0);
+    return `<div class="proyecto-card" onclick="verProyecto('${p.id}')">
+      <div class="proyecto-card-top"><div><div class="proyecto-nombre">${p.nombre}</div>${p.ubicacion?`<div class="proyecto-ubicacion">📍 ${p.ubicacion}</div>`:''}</div><span class="badge badge-${p.estado}">${elabel(p.estado)}</span></div>
+      <div class="proyecto-meta"><div class="proyecto-meta-item">Gastado: <strong>${fmt(total)}</strong></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function navTo(view) {
+  showView(view);
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const ni = document.getElementById(`nav-${view}`);
+  if (ni) ni.classList.add('active');
+  if (view === 'dashboard') renderDashboard();
+  if (view === 'proyectos') { renderProyectos(S.proyectos); document.getElementById('proyectos-count').textContent = `${S.proyectos.length} proyecto${S.proyectos.length!==1?'s':''}`; }
+  if (view === 'gastos') renderGastos(S.gastos);
+  if (view === 'ventas') renderVentas();
+}
+
+function showView(view) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(`view-${view}`);
+  if (el) { el.classList.add('active'); document.getElementById('app-content').scrollTop = 0; }
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+  if (id === 'modal-proyecto') {
+    document.getElementById('mp-title').textContent = 'Nuevo proyecto';
+    document.getElementById('mp-edit-id').value = '';
+    ['mp-nombre','mp-ubicacion','mp-presupuesto','mp-inicio','mp-entrega'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('mp-estado').value = 'planificacion';
+  }
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); }));
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+const v = id => document.getElementById(id).value.trim();
+const fmt = n => '$' + (+n||0).toLocaleString('es-EC', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const fdate = d => d ? new Date(d+'T00:00:00').toLocaleDateString('es-EC',{day:'2-digit',month:'short',year:'numeric'}) : '';
+const capFirst = s => s ? s[0].toUpperCase()+s.slice(1) : '';
+const elabel = e => ({planificacion:'Planificación',construccion:'Construcción',terminado:'Terminado',vendido:'Vendido'}[e]||e);
+const vlabel = e => ({negociando:'Negociando',cerrada:'Cerrada',escriturada:'Escriturada'}[e]||e);
+const flabel = f => ({contado:'Contado',credito_directo:'Crédito directo',hipotecario:'Hipotecario'}[f]||f);
+
+function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+function hideErr(id) { document.getElementById(id)?.classList.remove('show'); }
+
+function setLoading(id, on) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  if (on) { btn._t = btn.innerHTML; btn.innerHTML = '<div class="spinner"></div>'; btn.disabled = true; }
+  else { btn.innerHTML = btn._t||btn.innerHTML; btn.disabled = false; }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function toggleDropdown(close = false) {
+  const m = document.getElementById('user-dropdown');
+  if (close) m.classList.remove('show');
+  else m.classList.toggle('show');
+}
+
+document.addEventListener('click', e => { if (!e.target.closest('.dropdown')) document.getElementById('user-dropdown')?.classList.remove('show'); });
+</script>
+</body>
+</html>
