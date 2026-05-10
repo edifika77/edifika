@@ -629,7 +629,13 @@
 // ══════════════════════════════════════════════
 const SURL = 'https://qrqkonzlljmdstxlnpyv.supabase.co';
 const SKEY = 'sb_publishable_WCDe9-0rdXULeFL7T5AgmA_lneH-FbT';
-const db = supabase.createClient(SURL, SKEY);
+const db = supabase.createClient(SURL, SKEY, {
+  auth: {
+    storage: window.localStorage,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
 
 // ══════════════════════════════════════════════
 // STATE
