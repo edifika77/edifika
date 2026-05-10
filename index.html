@@ -894,13 +894,14 @@ async function updateFase(id, estado) {
 async function guardarFase() {
   const nombre = v('mf-nombre');
   if (!nombre) return;
+  if (!S.currentProyecto) { toast('Selecciona un proyecto primero'); return; }
   setLoading('btn-mf', true);
-  await db.from('fases').insert({ proyecto_id: S.currentProyecto.id, nombre, estado: v('mf-estado'), orden: 99 });
+  try {
+    const { error } = await db.from('fases').insert({ proyecto_id: S.currentProyecto.id, nombre, estado: v('mf-estado'), orden: 99 });
+    if (error) { console.error('Fase error:', error); toast('Error: ' + error.message); }
+    else { closeModal('modal-fase'); document.getElementById('mf-nombre').value = ''; toast('Fase agregada ✓'); await verProyecto(S.currentProyecto.id); }
+  } catch(e) { console.error(e); toast('Error al guardar'); }
   setLoading('btn-mf', false);
-  closeModal('modal-fase');
-  document.getElementById('mf-nombre').value = '';
-  toast('Fase agregada ✓');
-  await verProyecto(S.currentProyecto.id);
 }
 
 // ══════════════════════════════════════════════
