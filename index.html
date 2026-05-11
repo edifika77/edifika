@@ -974,9 +974,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (ev === 'SIGNED_OUT') { S = { user:null,profile:null,empresa:null,proyectos:[],gastos:[],ventas:[],currentFases:[],currentTareas:[],currentProyecto:null,pfiltro:'todos',gfiltro:'todos' }; showScreen('auth'); }
   });
 
-  // Event delegation for dynamic elements - avoids stale onclick issues
+  // Event delegation - handles all dynamic onclick needs
   document.addEventListener('click', e => {
-    if (e.target.closest('#btn-logout-dd')) handleLogout();
+    // Logout dropdown
+    if (e.target.closest('#btn-logout-dd')) { handleLogout(); return; }
+    // Project cards - works regardless of how they were rendered
+    const card = e.target.closest('.proyecto-card[data-pid]');
+    if (card) { verProyecto(card.dataset.pid); return; }
   });
 });
 
@@ -986,7 +990,7 @@ function setupPWA() {
   const m = {
     name: 'Edifika', short_name: 'Edifika',
     description: 'Gestión de proyectos de construcción',
-    start_url: '/', display: 'standalone',
+    start_url: window.location.href, display: 'standalone',
     background_color: '#1C1917', theme_color: '#F59E0B',
     icons: [
       { src: iconUrl, sizes: '192x192', type: 'image/svg+xml' },
@@ -1138,7 +1142,7 @@ function proyectoCardHTML(p) {
   const venta = S.ventas.find(v => v.proyecto_id === p.id);
   const diasRestantes = p.fecha_entrega ? Math.ceil((new Date(p.fecha_entrega)-new Date())/(1000*60*60*24)) : null;
   const tipoLabels = {conjunto:'Conjunto',casa:'Casa',edificio:'Edificio',comercial:'Comercial',mixto:'Mixto',otro:'Obra'};
-  return `<div class="proyecto-card" onclick="verProyecto('${p.id}')">
+  return `<div class="proyecto-card" data-pid="${p.id}">
     <div class="proyecto-card-top">
       <div style="flex:1;min-width:0;margin-right:10px">
         <div class="proyecto-nombre">${p.nombre}</div>
