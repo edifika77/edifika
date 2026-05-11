@@ -278,6 +278,10 @@
     .sb-item.active{background:rgba(245,158,11,0.15);color:var(--amber)}
     .sb-item.active svg{stroke:var(--amber)}
     .sb-item:not(.active) svg{stroke:var(--s400)}
+    .unidad-row{display:grid;grid-template-columns:1fr 80px 1fr 32px;gap:6px;align-items:center;margin-bottom:8px}
+    .unidad-row input,.unidad-row select{padding:8px 10px;border:1px solid var(--s200);border-radius:8px;font-size:13px;font-family:var(--fb);outline:none;width:100%}
+    .unidad-row input:focus,.unidad-row select:focus{border-color:var(--amber)}
+    .unidad-row .del-btn{width:30px;height:30px;border:none;border-radius:8px;background:var(--s100);color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
     /* ── UNIDADES ── */
     .unidades-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:4px}
     .unidad-card{border:1.5px solid var(--s200);border-radius:12px;padding:12px;cursor:pointer;transition:all .15s;background:var(--white);-webkit-tap-highlight-color:transparent}
@@ -639,6 +643,14 @@
     <div class="row2">
       <div class="form-group"><label class="form-label-light">Fecha inicio</label><input type="date" id="mp-inicio" class="form-input-light"></div>
       <div class="form-group"><label class="form-label-light">Fecha entrega</label><input type="date" id="mp-entrega" class="form-input-light"></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="form-label-light" style="margin-bottom:8px;font-weight:600">Unidades vendibles</div>
+      <div id="mp-unidades-rows"></div>
+      <button type="button" onclick="agregarFilaUnidad()" style="width:100%;padding:9px;border:1.5px dashed var(--s200);border-radius:10px;background:transparent;color:var(--amber-d);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fb)">
+        + Agregar tipo de unidad
+      </button>
+      <div style="font-size:11px;color:var(--s400);margin-top:6px">El sistema creará automáticamente cada unidad (Casa 1, Casa 2...). Puedes agregar más desde el proyecto.</div>
     </div>
     <div id="mp-error" class="error-msg"></div>
     <div style="display:flex;gap:8px">
@@ -1634,6 +1646,16 @@ function editarProyectoActual() {
   document.getElementById('mp-nombre').value = p.nombre;
   document.getElementById('mp-tipo').value = p.tipo || 'conjunto';
   document.getElementById('mp-ubicacion').value = p.ubicacion || '';
+  // Reset unit rows - show note about existing units
+  const rowContainer = document.getElementById('mp-unidades-rows');
+  rowContainer.innerHTML = '';
+  const existingCount = S.currentUnidades ? S.currentUnidades.length : 0;
+  if (existingCount > 0) {
+    const note = document.createElement('div');
+    note.style = 'background:var(--amber-l);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--amber-d);margin-bottom:8px;font-weight:500';
+    note.textContent = `✓ Este proyecto ya tiene ${existingCount} unidad${existingCount!==1?'es':''} definida${existingCount!==1?'s':''}. Agrega filas solo si quieres crear unidades adicionales.`;
+    rowContainer.appendChild(note);
+  }
   document.getElementById('mp-estado').value = p.estado;
   document.getElementById('mp-presupuesto').value = p.presupuesto || '';
   document.getElementById('mp-inicio').value = p.fecha_inicio || '';
@@ -1649,17 +1671,88 @@ async function eliminarProyectoActual() {
   navTo('proyectos');
 }
 
+function agregarFilaUnidad(tipo='casa', cantidad=1, precio=0) {
+  const container = document.getElementById('mp-unidades-rows');
+  const idx = container.children.length;
+  const row = document.createElement('div');
+  row.className = 'unidad-row';
+  row.dataset.rowIdx = idx;
+  row.innerHTML = `
+    <select class="ur-tipo" onchange="actualizarPlaceholder(this)">
+      <option value="casa" ${tipo==='casa'?'selected':''}>🏠 Casa</option>
+      <option value="departamento" ${tipo==='departamento'?'selected':''}>🏢 Departamento</option>
+      <option value="local_comercial" ${tipo==='local_comercial'?'selected':''}>🏪 Local comercial</option>
+      <option value="oficina" ${tipo==='oficina'?'selected':''}>💼 Oficina</option>
+      <option value="bodega" ${tipo==='bodega'?'selected':''}>📦 Bodega</option>
+      <option value="parqueadero" ${tipo==='parqueadero'?'selected':''}>🚗 Parqueadero</option>
+      <option value="otro" ${tipo==='otro'?'selected':''}>📐 Otro</option>
+    </select>
+    <input type="number" class="ur-cant" value="${cantidad}" min="1" max="500" placeholder="N°" title="Cantidad">
+    <input type="number" class="ur-precio" value="${precio||''}" placeholder="Precio base $" title="Precio base por unidad">
+    <button class="del-btn" onclick="this.closest('.unidad-row').remove()" title="Eliminar fila">×</button>
+  `;
+  container.appendChild(row);
+}
+
+function leerFilasUnidades() {
+  const rows = document.querySelectorAll('.unidad-row');
+  return Array.from(rows).map(r => ({
+    tipo: r.querySelector('.ur-tipo').value,
+    cantidad: parseInt(r.querySelector('.ur-cant').value) || 1,
+    precio: parseFloat(r.querySelector('.ur-precio').value) || 0
+  })).filter(r => r.cantidad > 0);
+}
+
+async function crearUnidadesDesdeFilas(proyectoId, filas) {
+  const tipoLabels = {casa:'Casa',departamento:'Depto',local_comercial:'Local',oficina:'Ofic.',bodega:'Bodega',parqueadero:'Park.',otro:'Unidad'};
+  const counters = {};
+  const inserts = [];
+  for (const fila of filas) {
+    counters[fila.tipo] = counters[fila.tipo] || 0;
+    for (let i = 0; i < fila.cantidad; i++) {
+      counters[fila.tipo]++;
+      const num = counters[fila.tipo];
+      inserts.push({
+        proyecto_id: proyectoId,
+        empresa_id: S.empresa.id,
+        tipo: fila.tipo,
+        identificador: `${tipoLabels[fila.tipo]||'Unidad'} ${num}`,
+        precio_base: fila.precio,
+        estado: 'disponible'
+      });
+    }
+  }
+  if (inserts.length > 0) {
+    await db.from('unidades').insert(inserts);
+  }
+  return inserts.length;
+}
+
 async function guardarProyecto() {
   const nombre = v('mp-nombre');
   if (!nombre) return showErr('mp-error', 'El nombre es obligatorio');
   const editId = v('mp-edit-id');
   const data = { nombre, tipo: v('mp-tipo') || 'conjunto', ubicacion: v('mp-ubicacion') || null, estado: v('mp-estado'), presupuesto: parseFloat(v('mp-presupuesto')) || 0, fecha_inicio: v('mp-inicio') || null, fecha_entrega: v('mp-entrega') || null, empresa_id: S.empresa.id };
   setLoading('btn-mp', true);
-  if (editId) { await db.from('proyectos').update(data).eq('id', editId); toast('Proyecto actualizado ✓'); }
-  else { await db.from('proyectos').insert(data); toast('Proyecto creado ✓'); }
+  try {
+    if (editId) {
+      await db.from('proyectos').update(data).eq('id', editId);
+      const filas = leerFilasUnidades();
+      if (filas.length > 0) { await crearUnidadesDesdeFilas(editId, filas); }
+      toast('Proyecto actualizado ✓');
+    } else {
+      const { data: nuevo } = await db.from('proyectos').insert(data).select().single();
+      const filas = leerFilasUnidades();
+      if (filas.length > 0 && nuevo) {
+        const n = await crearUnidadesDesdeFilas(nuevo.id, filas);
+        toast(`Proyecto creado con ${n} unidades ✓`);
+      } else { toast('Proyecto creado ✓'); }
+    }
+  } catch(e) { showErr('mp-error', 'Error al guardar'); console.error(e); }
   setLoading('btn-mp', false);
   closeModal('modal-proyecto');
   await cargarProyectos();
+  await cargarTareas();
   renderProyectos(S.proyectos);
   renderDashboard();
 }
@@ -1887,6 +1980,9 @@ function openModal(id) {
     ['mp-nombre','mp-ubicacion','mp-presupuesto','mp-inicio','mp-entrega'].forEach(i => document.getElementById(i).value = '');
     document.getElementById('mp-estado').value = 'planificacion';
     document.getElementById('mp-tipo').value = 'conjunto';
+    // Reset units rows - start with 1 empty row for new projects
+    document.getElementById('mp-unidades-rows').innerHTML = '';
+    agregarFilaUnidad('casa', 1, 0);
   }
 }
 
