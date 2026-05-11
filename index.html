@@ -426,7 +426,7 @@
             Panel Admin
           </div>
         </div>
-        <button onclick="handleLogout()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--s400);font-size:13px;cursor:pointer;font-family:var(--fb);text-align:left;display:flex;align-items:center;gap:8px">
+        <button id="btn-sb-logout" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--s400);font-size:13px;cursor:pointer;font-family:var(--fb);text-align:left;display:flex;align-items:center;gap:8px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Cerrar sesión
         </button>
@@ -1224,8 +1224,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Event delegation global - ÚNICO listener para todos los clics dinámicos
   document.addEventListener('click', e => {
-    // Logout dropdown
-    if (e.target.closest('#btn-logout-dd')) { handleLogout(); return; }
+    // Todos los botones de logout
+    if (e.target.closest('#btn-logout-dd') || e.target.closest('#btn-sb-logout')) {
+      handleLogout(); return;
+    }
     // Project cards
     const card = e.target.closest('.proyecto-card[data-pid]');
     if (card && card.dataset.pid) {
@@ -1233,7 +1235,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (pid && pid.length > 10) verProyecto(pid);
       return;
     }
-  }, true); // useCapture=true para mayor fiabilidad
+  }, true);
 });
 
 function setupPWA() {
@@ -2283,8 +2285,19 @@ async function cargarGastos() {
 }
 
 async function cargarTareas() {
-  const { data } = await db.from('tareas').select('*').eq('empresa_id', S.empresa.id).order('orden').order('created_at');
-  S.tareas = data || [];
+  try {
+    const { data, error } = await db.from('tareas').select('*').eq('empresa_id', S.empresa.id).order('orden').order('created_at');
+    if (error) {
+      // Si falla orden (columna no existe aún), intentar sin orden
+      const { data: data2 } = await db.from('tareas').select('*').eq('empresa_id', S.empresa.id).order('created_at');
+      S.tareas = data2 || [];
+    } else {
+      S.tareas = data || [];
+    }
+  } catch(e) {
+    console.error('cargarTareas error:', e);
+    S.tareas = [];
+  }
 }
 
 function gastoHTML(g, showProy = true) {
@@ -2712,7 +2725,13 @@ async function cargarSuperadmin() {
 
   // Cargar todas las empresas
   const { data: empresas, error } = await db.from('empresas').select('*').order('created_at', { ascending: false });
-  if (error) { toast('Error al cargar empresas'); return; }
+  console.log('[SA] empresas:', empresas, 'error:', error);
+  if (error) { toast('Error al cargar empresas: ' + error.message); return; }
+  if (!empresas || empresas.length === 0) {
+    document.getElementById('sa-metrics').innerHTML = '<div class="metric-card"><div class="metric-label">Total empresas</div><div class="metric-value amber">0</div></div>';
+    document.getElementById('sa-empresas-lista').innerHTML = '<div class="empty"><p style="color:var(--s400);padding:20px">No hay empresas registradas aún o no hay acceso a los datos.</p></div>';
+    return;
+  }
   saEmpresas = empresas || [];
 
   // Cargar conteos por empresa
