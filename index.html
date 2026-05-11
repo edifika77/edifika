@@ -954,7 +954,7 @@ const db = supabase.createClient(SURL, SKEY, {
 // ══════════════════════════════════════════════
 let S = {
   user: null, profile: null, empresa: null,
-  proyectos: [], gastos: [], ventas: [],
+  proyectos: [], gastos: [], ventas: [], tareas: [],
   currentProyecto: null, currentFases: [], currentTareas: [], currentUnidades: [],
   openFases: new Set(),
   pfiltro: 'todos', gfiltro: 'todos'
@@ -1033,7 +1033,7 @@ async function iniciar() {
 
     S.empresa = profile.empresas;
     actualizarUI();
-    await Promise.all([cargarProyectos(), cargarGastos(), cargarVentas()]);
+    await Promise.all([cargarProyectos(), cargarGastos(), cargarVentas(), cargarTareas()]);
     showScreen('main');
     navTo('dashboard');
   } catch (e) { console.error(e); toast('Error al cargar'); }
@@ -1155,6 +1155,7 @@ async function verProyecto(id) {
   if (!p) return;
   S.currentProyecto = p;
 
+  try {
   const [{ data: fases }, { data: tareas }, { data: unidades }] = await Promise.all([
     db.from('fases').select('*').eq('proyecto_id', id).order('orden'),
     db.from('tareas').select('*').eq('proyecto_id', id).order('created_at'),
@@ -1164,6 +1165,8 @@ async function verProyecto(id) {
   S.currentFases = fases || [];
   S.currentTareas = tareas || [];
   S.currentUnidades = unidades || [];
+  // Update global tareas state for accurate totals
+  S.tareas = S.tareas.filter(t => t.proyecto_id !== id).concat(tareas || []);
 
   document.getElementById('det-nombre').textContent = p.nombre;
   document.getElementById('det-ubicacion').textContent = p.ubicacion || '';
@@ -1562,6 +1565,8 @@ function actualizarSummaryBar() {
   const totalEst = S.currentTareas.reduce((a,b) => a + (+b.costo_estimado||0), 0);
   const gastosAd = S.gastos.filter(g => g.proyecto_id === p.id).reduce((a,b) => a + +b.monto, 0);
   const totalInvertido = totalReal + gastosAd;
+  // Sync global tareas so dashboard stays accurate
+  S.tareas = S.tareas.filter(t => t.proyecto_id !== p.id).concat(S.currentTareas);
 
   const gastoEl = document.getElementById('det-gasto');
   const presEl = document.getElementById('det-presupuesto');
@@ -1658,6 +1663,11 @@ async function guardarFase() {
 async function cargarGastos() {
   const { data } = await db.from('gastos').select('*').eq('empresa_id', S.empresa.id).order('fecha', { ascending:false });
   S.gastos = data || [];
+}
+
+async function cargarTareas() {
+  const { data } = await db.from('tareas').select('*').eq('empresa_id', S.empresa.id);
+  S.tareas = data || [];
 }
 
 function gastoHTML(g, showProy = true) {
@@ -1783,7 +1793,9 @@ function renderDashboard() {
   document.getElementById('dashboard-greeting').textContent = `${saludo}, ${(S.profile?.nombre||'').split(' ')[0]}`;
 
   const activos = S.proyectos.filter(p => ['planificacion','construccion'].includes(p.estado)).length;
-  const invertido = S.gastos.reduce((a,b) => a + +b.monto, 0);
+  const gastosAd = S.gastos.reduce((a,b) => a + +b.monto, 0);
+  const tareasReal = S.tareas.reduce((a,b) => a + (+b.costo_real||0), 0);
+  const invertido = gastosAd + tareasReal;
   const cerradas = S.ventas.filter(v => v.estado !== 'negociando');
   const ingresos = cerradas.reduce((a,b) => a + +b.precio, 0);
   const utilidad = ingresos - invertido;
