@@ -1248,7 +1248,7 @@ function toggleTarea(tareaId) {
   if (tarea.estado === 'completada') {
     // Revertir a pendiente — no pedir confirmación, solo cambiar estado
     tarea.estado = 'pendiente';
-    actualizarCheckDOM(tareaId, 'pendiente');
+    actualizarCheckDOM(tareaId, 'pendiente', 0);
     db.from('tareas').update({ estado: 'pendiente' }).eq('id', tareaId);
     toast('Tarea marcada como pendiente');
   } else {
@@ -1292,6 +1292,48 @@ function actualizarCheckDOM(tareaId, estado, costoReal = null) {
     let html = tarea && tarea.costo_estimado ? `<span class="tarea-costo-tag tarea-est">📋 Est: ${fmt(tarea.costo_estimado)}</span>` : '';
     html += costoReal ? `<span class="tarea-costo-tag tarea-real">💰 Real: ${fmt(costoReal)}</span>` : '';
     costosEl.innerHTML = html || '<span style="font-size:11px;color:var(--s400)">Sin costos registrados</span>';
+  }
+  // Actualizar totales del proyecto en la summary bar
+  actualizarSummaryBar();
+}
+
+function actualizarSummaryBar() {
+  if (!S.currentProyecto) return;
+  const p = S.currentProyecto;
+  const totalReal = S.currentTareas.reduce((a,b) => a + (+b.costo_real||0), 0);
+  const totalEst = S.currentTareas.reduce((a,b) => a + (+b.costo_estimado||0), 0);
+  const gastosAd = S.gastos.filter(g => g.proyecto_id === p.id).reduce((a,b) => a + +b.monto, 0);
+  const totalInvertido = totalReal + gastosAd;
+
+  const gastoEl = document.getElementById('det-gasto');
+  const presEl = document.getElementById('det-presupuesto');
+  const balEl = document.getElementById('det-balance');
+
+  if (gastoEl) gastoEl.textContent = fmt(totalInvertido);
+  if (presEl) presEl.textContent = p.presupuesto ? fmt(p.presupuesto) : fmt(totalEst) + ' est.';
+
+  if (balEl) {
+    const ref = p.presupuesto || totalEst;
+    if (ref) {
+      const bal = ref - totalInvertido;
+      balEl.textContent = bal >= 0 ? `${fmt(bal)} disp.` : `${fmt(Math.abs(bal))} exceso`;
+      balEl.style.color = bal >= 0 ? 'var(--green)' : 'var(--red)';
+    } else {
+      balEl.textContent = '—';
+    }
+  }
+
+  // Actualizar fase totales visualmente
+  if (S.currentFases) {
+    S.currentFases.forEach((f, fi) => {
+      const tareasF = S.currentTareas.filter(t => t.fase_id === f.id);
+      const estF = tareasF.reduce((a,b) => a + (+b.costo_estimado||0), 0);
+      const realF = tareasF.reduce((a,b) => a + (+b.costo_real||0), 0);
+      const totalEl = document.querySelector(`#fb-${fi}`)?.closest('.fase-bloque')?.querySelector('.fase-totales');
+      if (totalEl) {
+        totalEl.textContent = realF ? '💰 ' + fmt(realF) : estF ? '📋 ' + fmt(estF) + ' est.' : '';
+      }
+    });
   }
 }
 
