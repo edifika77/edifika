@@ -283,7 +283,7 @@
     .sb-item.active svg{stroke:var(--amber)}
     .sb-item:not(.active) svg{stroke:var(--s400)}
     /* ── SUPERADMIN ── */
-    .sa-empresa-row{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--s100);transition:background .1s}
+    .sa-empresa-row{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--s100);transition:background .1s}
     .sa-empresa-row:last-child{border-bottom:none}
     .sa-empresa-row:hover{background:var(--s50)}
     .plan-badge-free{background:#F3F4F6;color:#6B7280}
@@ -376,7 +376,11 @@
       <div id="onboard-error" class="error-msg"></div>
       <div class="form-group" style="text-align:left">
         <label class="form-label">Nombre de la empresa</label>
-        <input type="text" id="empresa-nombre" class="form-input" placeholder="Ej: Constructora Vaca Salazar" onkeydown="if(event.key==='Enter')handleCreateEmpresa()">
+        <input type="text" id="empresa-nombre" class="form-input" placeholder="Ej: Constructora Vaca Salazar">
+      </div>
+      <div class="form-group" style="text-align:left">
+        <label class="form-label">Teléfono de contacto</label>
+        <input type="tel" id="empresa-telefono" class="form-input" placeholder="Ej: 0991234567">
       </div>
       <button class="btn btn-primary" id="btn-empresa" onclick="handleCreateEmpresa()">Comenzar →</button>
     </div>
@@ -613,6 +617,7 @@
           <div class="perfil-item"><span class="perfil-item-label">Plan</span><span class="perfil-item-value"><span class="badge badge-construccion" id="perfil-plan">Free</span></span></div>
           <div class="perfil-item"><span class="perfil-item-label">Proyectos</span><span class="perfil-item-value" id="perfil-proyectos-uso"></span></div>
           <div class="perfil-item"><span class="perfil-item-label">Email</span><span class="perfil-item-value" id="perfil-email" style="font-size:13px"></span></div>
+          <div class="perfil-item" id="perfil-tel-row" style="display:none"><span class="perfil-item-label">Teléfono empresa</span><span class="perfil-item-value" id="perfil-tel"></span></div>
         </div>
 
         <!-- Gestión de usuarios (solo admin) -->
@@ -724,6 +729,10 @@
       <div class="nav-item" id="nav-perfil" onclick="navTo('perfil')">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Perfil</span>
+      </div>
+      <div class="nav-item" id="nav-superadmin" onclick="navTo('superadmin')" style="display:none">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Admin</span>
       </div>
     </nav>
 
@@ -1315,6 +1324,12 @@ function actualizarUI() {
   document.getElementById('perfil-empresa').textContent = empresaNombre;
   document.getElementById('perfil-plan').textContent = esSA ? 'Superadmin ⭐' : capFirst(S.empresa.plan || 'free');
   document.getElementById('perfil-email').textContent = S.user.email;
+  if (S.empresa?.telefono) {
+    const telRow = document.getElementById('perfil-tel-row');
+    const telEl = document.getElementById('perfil-tel');
+    if (telRow) telRow.style.display = '';
+    if (telEl) telEl.textContent = S.empresa.telefono;
+  }
   const sbAv = document.getElementById('sb-avatar');
   if(sbAv) sbAv.textContent = ini;
   const sbNom = document.getElementById('sb-nombre');
@@ -1383,14 +1398,15 @@ async function handleCreateEmpresa() {
     }
 
     // 2. Crear empresa
+    const telefono = v('empresa-telefono') || null;
     const { data: emp, error: e1 } = await db
-      .from('empresas').insert({ nombre, plan:'free' }).select().single();
+      .from('empresas').insert({ nombre, plan:'free', telefono }).select().single();
     console.log('[onboard] emp:', emp, 'e1:', e1);
     if (e1) throw new Error('Error al crear empresa: ' + e1.message);
 
     // 3. Vincular perfil
     const { error: e2 } = await db
-      .from('profiles').update({ empresa_id: emp.id, rol:'admin' }).eq('id', S.user.id);
+      .from('profiles').update({ empresa_id: emp.id, rol:'admin', email: S.user.email }).eq('id', S.user.id);
     console.log('[onboard] e2:', e2);
     if (e2) throw new Error('Error al vincular perfil: ' + e2.message);
 
@@ -2771,8 +2787,13 @@ function esSuperadmin() {
 }
 
 function activarSuperadmin() {
+  const visible = esSuperadmin();
+  // Desktop sidebar
   const item = document.getElementById('sb-superadmin-item');
-  if (item) item.style.display = esSuperadmin() ? 'block' : 'none';
+  if (item) item.style.display = visible ? 'block' : 'none';
+  // Mobile bottom nav
+  const navItem = document.getElementById('nav-superadmin');
+  if (navItem) navItem.style.display = visible ? 'flex' : 'none';
 }
 
 async function cargarSuperadmin() {
@@ -2791,7 +2812,7 @@ async function cargarSuperadmin() {
 
   // Cargar conteos por empresa
   const [{ data: perfiles }, { data: proyectos }] = await Promise.all([
-    db.from('profiles').select('empresa_id, rol'),
+    db.from('profiles').select('empresa_id, rol, email, nombre'),
     db.from('proyectos').select('empresa_id, estado')
   ]);
 
@@ -2822,22 +2843,30 @@ function renderEmpresasSA(empresas, perfiles, proyectos) {
     const fechaReg = new Date(e.created_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' });
     const planClass = { free:'plan-badge-free', basico:'plan-badge-basico', premium:'plan-badge-premium' }[e.plan] || 'plan-badge-free';
 
+    const adminUser = users.find(u => u.rol === 'admin') || users[0];
+    const adminEmail = adminUser?.email || '';
+    const contactoTel = e.telefono || '';
     return `<div class="sa-empresa-row" id="sa-row-${e.id}">
-      <div>
+      <div style="min-width:0;flex:1">
         <div style="font-size:14px;font-weight:600;color:var(--dark2)">${e.nombre}</div>
-        <div style="display:flex;gap:10px;margin-top:3px">
+        <div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">
           <span class="sa-stat">📅 ${fechaReg}</span>
           <span class="sa-stat">👥 ${users.length} usuario${users.length!==1?'s':''}</span>
-          <span class="sa-stat">🏗️ ${proys.length} proyecto${proys.length!==1?'s':''}${activos?' ('+activos+' activo'+( activos!==1?'s':'')+')'  :''}</span>
+          <span class="sa-stat">🏗️ ${proys.length} proy.</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+          ${adminEmail?`<a href="mailto:${adminEmail}" style="font-size:11px;color:var(--amber-d);font-weight:500;text-decoration:none">✉️ ${adminEmail}</a>`:''}
+          ${contactoTel?`<a href="https://wa.me/593${contactoTel.replace(/^0/,'')}" target="_blank" style="font-size:11px;color:var(--green);font-weight:500;text-decoration:none">💬 ${contactoTel}</a>`:''}
         </div>
       </div>
-      <span class="badge ${planClass}" style="font-size:11px">${capFirst(e.plan||'free')}</span>
-      <select class="plan-select" onchange="cambiarPlanEmpresa('${e.id}',this.value)" title="Cambiar plan">
-        <option value="free" ${e.plan==='free'?'selected':''}>Free</option>
-        <option value="basico" ${e.plan==='basico'?'selected':''}>Básico</option>
-        <option value="premium" ${e.plan==='premium'?'selected':''}>Premium</option>
-      </select>
-      <button onclick="verDetalleEmpresa('${e.id}')" style="padding:6px 10px;background:var(--s100);border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:var(--fb);color:var(--dark2)" title="Ver detalle">Ver →</button>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        <span class="badge ${planClass}" style="font-size:11px">${capFirst(e.plan||'free')}</span>
+        <select class="plan-select" onchange="cambiarPlanEmpresa('${e.id}',this.value)" title="Cambiar plan">
+          <option value="free" ${e.plan==='free'?'selected':''}>Free</option>
+          <option value="basico" ${e.plan==='basico'?'selected':''}>Básico</option>
+          <option value="premium" ${e.plan==='premium'?'selected':''}>Premium</option>
+        </select>
+      </div>
     </div>`;
   }).join('');
 }
