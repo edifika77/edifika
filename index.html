@@ -1255,6 +1255,10 @@ async function verProyecto(id) {
   renderUnidades(unidades || []);
 
   showView('proyecto-detalle');
+  } catch(err) {
+    console.error('Error al abrir proyecto:', err);
+    toast('Error al cargar el proyecto. Intenta de nuevo.');
+  }
 }
 
 // ══════════════════════════════════════════════
