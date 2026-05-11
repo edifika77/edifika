@@ -562,7 +562,7 @@
             <div class="page-title">Ventas</div>
             <div class="page-subtitle" id="ventas-sub"></div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="abrirVenta()">+ Nueva</button>
+          <button class="btn btn-primary btn-sm" onclick="abrirVenta()">+ Nueva venta</button>
         </div>
         <div class="summary-bar">
           <div><div class="summary-label">Ingresos totales</div><div class="summary-value" id="ventas-total">$0</div></div>
@@ -825,48 +825,70 @@
   </div>
 </div>
 
-<!-- Modal: Registrar venta de unidad -->
+<!-- Modal: Registrar venta de unidad (mejorado) -->
 <div class="modal-overlay" id="modal-venta-unidad">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="mvu-title">Registrar venta</div>
+    <div class="modal-title">Registrar venta</div>
     <input type="hidden" id="mvu-unidad-id">
-    <div style="background:var(--s50);border-radius:10px;padding:12px 14px;margin-bottom:16px" id="mvu-unidad-info"></div>
-    <div class="form-group"><label class="form-label-light">Nombre del comprador *</label>
-      <input type="text" id="mvu-comprador" class="form-input-light" placeholder="Nombre completo">
+
+    <!-- Selector de unidad disponible -->
+    <div id="mvu-selector-wrap" class="form-group">
+      <label class="form-label-light">Unidad a vender *</label>
+      <select id="mvu-selector" class="form-input-light" onchange="seleccionarUnidadVenta(this.value)"></select>
     </div>
-    <div class="row2">
-      <div class="form-group"><label class="form-label-light">Cédula</label>
-        <input type="text" id="mvu-cedula" class="form-input-light" placeholder="0000000000">
+
+    <!-- Info de la unidad seleccionada -->
+    <div id="mvu-unidad-info" style="display:none;background:var(--s50);border-radius:10px;padding:12px 14px;margin-bottom:14px;border:1px solid var(--s200)"></div>
+
+    <!-- Sin unidades disponibles -->
+    <div id="mvu-sin-unidades" style="display:none;background:#FEE2E2;border-radius:10px;padding:14px;text-align:center;margin-bottom:14px">
+      <div style="font-size:20px;margin-bottom:6px">🚫</div>
+      <div style="font-size:14px;font-weight:600;color:var(--red)">Todas las unidades vendidas</div>
+      <div style="font-size:12px;color:var(--s600);margin-top:4px">Este proyecto no tiene unidades disponibles para vender. Agrega más unidades desde la ficha del proyecto.</div>
+    </div>
+
+    <!-- Formulario (se oculta si no hay unidades) -->
+    <div id="mvu-form">
+      <div class="form-group"><label class="form-label-light">Nombre del comprador *</label>
+        <input type="text" id="mvu-comprador" class="form-input-light" placeholder="Nombre completo">
       </div>
-      <div class="form-group"><label class="form-label-light">Teléfono</label>
-        <input type="text" id="mvu-tel" class="form-input-light" placeholder="0990000000">
+      <div class="row2">
+        <div class="form-group"><label class="form-label-light">Cédula</label>
+          <input type="text" id="mvu-cedula" class="form-input-light" placeholder="0000000000">
+        </div>
+        <div class="form-group"><label class="form-label-light">Teléfono</label>
+          <input type="text" id="mvu-tel" class="form-input-light" placeholder="0990000000">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="form-group">
+          <label class="form-label-light">Precio de venta ($) *</label>
+          <input type="number" id="mvu-precio" class="form-input-light" placeholder="0.00">
+          <div style="font-size:10px;color:var(--s400);margin-top:3px" id="mvu-precio-hint"></div>
+        </div>
+        <div class="form-group"><label class="form-label-light">Fecha</label>
+          <input type="date" id="mvu-fecha" class="form-input-light">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="form-group"><label class="form-label-light">Forma de pago</label>
+          <select id="mvu-forma" class="form-input-light">
+            <option value="contado">Contado</option>
+            <option value="credito_directo">Crédito directo</option>
+            <option value="hipotecario">Hipotecario</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label-light">Estado</label>
+          <select id="mvu-estado" class="form-input-light">
+            <option value="negociando">Negociando</option>
+            <option value="cerrada">Cerrada</option>
+            <option value="escriturada">Escriturada</option>
+          </select>
+        </div>
       </div>
     </div>
-    <div class="row2">
-      <div class="form-group"><label class="form-label-light">Precio de venta ($) *</label>
-        <input type="number" id="mvu-precio" class="form-input-light" placeholder="0.00">
-      </div>
-      <div class="form-group"><label class="form-label-light">Fecha</label>
-        <input type="date" id="mvu-fecha" class="form-input-light">
-      </div>
-    </div>
-    <div class="row2">
-      <div class="form-group"><label class="form-label-light">Forma de pago</label>
-        <select id="mvu-forma" class="form-input-light">
-          <option value="contado">Contado</option>
-          <option value="credito_directo">Crédito directo</option>
-          <option value="hipotecario">Hipotecario</option>
-        </select>
-      </div>
-      <div class="form-group"><label class="form-label-light">Estado</label>
-        <select id="mvu-estado" class="form-input-light">
-          <option value="negociando">Negociando</option>
-          <option value="cerrada">Cerrada</option>
-          <option value="escriturada">Escriturada</option>
-        </select>
-      </div>
-    </div>
+
     <div id="mvu-error" class="error-msg"></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-venta-unidad')">Cancelar</button>
@@ -1352,31 +1374,101 @@ function estadoUnidadLabel(e) {
   return { disponible:'Disponible', reservada:'Reservada', vendida:'Vendida', arrendada:'Arrendada' }[e] || e;
 }
 
-function clickUnidad(unidadId) {
-  const u = S.currentUnidades.find(x => x.id === unidadId);
-  if (!u) return;
-  if (u.estado === 'vendida') { toast('Esta unidad ya fue vendida'); return; }
-  // Abrir modal de venta para esta unidad
-  document.getElementById('mvu-unidad-id').value = unidadId;
-  document.getElementById('mvu-title').textContent = `Vender: ${u.identificador}`;
-  document.getElementById('mvu-unidad-info').innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px">
-      <span style="font-size:28px">${tipoIcon[u.tipo]||'📐'}</span>
-      <div>
-        <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--dark2)">${u.identificador} — ${tipoLabel[u.tipo]||u.tipo}</div>
-        ${u.area_m2 ? `<div style="font-size:12px;color:var(--s400)">${u.area_m2} m²${u.piso?' · Piso '+u.piso:''}</div>` : ''}
-        ${u.precio_base ? `<div style="font-size:13px;font-weight:600;color:var(--amber-d);margin-top:2px">Precio base: ${fmt(u.precio_base)}</div>` : ''}
-      </div>
-    </div>`;
-  document.getElementById('mvu-precio').value = u.precio_base || '';
-  document.getElementById('mvu-comprador').value = '';
-  document.getElementById('mvu-cedula').value = '';
-  document.getElementById('mvu-tel').value = '';
+function abrirModalVenta(proyectoId = null, preseleccionarUnidadId = null) {
+  const pid = proyectoId || S.currentProyecto?.id;
+  if (!pid) { toast('Selecciona un proyecto primero'); return; }
+
+  // Cargar unidades disponibles del proyecto
+  const todasUnidades = S.currentUnidades.length > 0 && S.currentProyecto?.id === pid
+    ? S.currentUnidades
+    : [];
+
+  const disponibles = todasUnidades.filter(u => u.estado === 'disponible');
+  const vendidas = todasUnidades.filter(u => u.estado !== 'disponible').length;
+  const total = todasUnidades.length;
+
+  // Limpiar formulario
+  ['mvu-comprador','mvu-cedula','mvu-tel','mvu-precio'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('mvu-fecha').value = new Date().toISOString().split('T')[0];
   document.getElementById('mvu-forma').value = 'contado';
   document.getElementById('mvu-estado').value = 'negociando';
   document.getElementById('mvu-error').classList.remove('show');
+  document.getElementById('mvu-unidad-id').value = '';
+
+  const sinUnidades = document.getElementById('mvu-sin-unidades');
+  const form = document.getElementById('mvu-form');
+  const selectorWrap = document.getElementById('mvu-selector-wrap');
+  const infoEl = document.getElementById('mvu-unidad-info');
+  const btnGuardar = document.getElementById('btn-mvu');
+
+  if (total === 0) {
+    // Proyecto sin unidades definidas
+    sinUnidades.innerHTML = `<div style="font-size:20px;margin-bottom:6px">⚠️</div>
+      <div style="font-size:14px;font-weight:600;color:var(--amber-d)">Sin unidades definidas</div>
+      <div style="font-size:12px;color:var(--s600);margin-top:4px">Este proyecto no tiene unidades de venta configuradas. Ve a la ficha del proyecto y agrega las unidades primero.</div>`;
+    sinUnidades.style.display = 'block';
+    sinUnidades.style.background = '#FEF3C7';
+    form.style.display = 'none';
+    selectorWrap.style.display = 'none';
+    btnGuardar.style.display = 'none';
+  } else if (disponibles.length === 0) {
+    // Todas vendidas/reservadas
+    sinUnidades.innerHTML = `<div style="font-size:20px;margin-bottom:6px">🚫</div>
+      <div style="font-size:14px;font-weight:600;color:var(--red)">Todas las unidades están vendidas o reservadas</div>
+      <div style="font-size:12px;color:var(--s600);margin-top:6px">${vendidas} de ${total} unidades ya tienen una venta registrada.</div>`;
+    sinUnidades.style.display = 'block';
+    sinUnidades.style.background = '#FEE2E2';
+    form.style.display = 'none';
+    selectorWrap.style.display = 'none';
+    btnGuardar.style.display = 'none';
+  } else {
+    // Hay unidades disponibles
+    sinUnidades.style.display = 'none';
+    form.style.display = 'block';
+    selectorWrap.style.display = 'block';
+    btnGuardar.style.display = '';
+
+    // Llenar selector
+    const sel = document.getElementById('mvu-selector');
+    sel.innerHTML = disponibles.map(u =>
+      `<option value="${u.id}" data-precio="${u.precio_base||0}">${tipoIcon[u.tipo]||'🏠'} ${u.identificador}${u.area_m2?' · '+u.area_m2+'m²':''}${u.precio_base?' — '+fmt(u.precio_base):''}</option>`
+    ).join('');
+
+    // Preseleccionar si viene de clickUnidad
+    if (preseleccionarUnidadId) sel.value = preseleccionarUnidadId;
+    seleccionarUnidadVenta(sel.value);
+
+    // Info de disponibilidad
+    if (total > 0) {
+      infoEl.innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--s600)">Total: <strong>${total}</strong></span>
+        <span style="font-size:12px;color:var(--blue)">Disponibles: <strong style="color:var(--green)">${disponibles.length}</strong></span>
+        ${vendidas>0?`<span style="font-size:12px;color:var(--s600)">Vendidas/Reservadas: <strong>${vendidas}</strong></span>`:''}
+      </div>`;
+      infoEl.style.display = 'block';
+    }
+  }
+
   openModal('modal-venta-unidad');
+}
+
+function seleccionarUnidadVenta(unidadId) {
+  if (!unidadId) return;
+  document.getElementById('mvu-unidad-id').value = unidadId;
+  const u = S.currentUnidades.find(x => x.id === unidadId);
+  if (!u) return;
+  // Pre-llenar precio base con posibilidad de editar
+  document.getElementById('mvu-precio').value = u.precio_base || '';
+  const hint = document.getElementById('mvu-precio-hint');
+  if (hint) hint.textContent = u.precio_base ? `Precio base registrado: ${fmt(u.precio_base)} — puedes modificarlo` : 'Ingresa el precio de venta';
+}
+
+function clickUnidad(unidadId) {
+  const u = S.currentUnidades.find(x => x.id === unidadId);
+  if (!u) return;
+  if (u.estado === 'vendida') { toast('Esta unidad ya fue vendida'); return; }
+  if (u.estado === 'reservada') { toast('Esta unidad ya está reservada'); return; }
+  abrirModalVenta(S.currentProyecto?.id, unidadId);
 }
 
 async function guardarUnidad() {
@@ -1406,14 +1498,17 @@ async function guardarUnidad() {
 }
 
 async function guardarVentaUnidad() {
-  const unidadId = document.getElementById('mvu-unidad-id').value;
+  const unidadId = document.getElementById('mvu-unidad-id').value || document.getElementById('mvu-selector')?.value;
   const comprador = v('mvu-comprador');
   const precio = parseFloat(v('mvu-precio'));
-  if (!comprador || !precio) return showErr('mvu-error', 'Nombre del comprador y precio son obligatorios');
+
+  if (!unidadId) return showErr('mvu-error', 'Selecciona una unidad');
+  if (!comprador) return showErr('mvu-error', 'Ingresa el nombre del comprador');
+  if (!precio || precio <= 0) return showErr('mvu-error', 'Ingresa un precio de venta válido');
 
   setLoading('btn-mvu', true);
   try {
-    // Registrar venta
+    const estadoVenta = v('mvu-estado');
     const { error: e1 } = await db.from('ventas').insert({
       proyecto_id: S.currentProyecto.id,
       empresa_id: S.empresa.id,
@@ -1424,13 +1519,17 @@ async function guardarVentaUnidad() {
       precio,
       forma_pago: v('mvu-forma'),
       fecha_cierre: v('mvu-fecha') || null,
-      estado: v('mvu-estado')
+      estado: estadoVenta
     });
     if (e1) throw e1;
 
-    // Actualizar estado de la unidad
-    const nuevoEstado = v('mvu-estado') === 'negociando' ? 'reservada' : 'vendida';
-    await db.from('unidades').update({ estado: nuevoEstado }).eq('id', unidadId);
+    // Actualizar estado de la unidad según estado de la venta
+    const nuevoEstadoUnidad = estadoVenta === 'negociando' ? 'reservada' : 'vendida';
+    await db.from('unidades').update({ estado: nuevoEstadoUnidad }).eq('id', unidadId);
+
+    // Actualizar en memoria
+    const u = S.currentUnidades.find(x => x.id === unidadId);
+    if (u) u.estado = nuevoEstadoUnidad;
 
     closeModal('modal-venta-unidad');
     toast('Venta registrada ✓');
@@ -1961,12 +2060,60 @@ function renderVentas() {
   }).join('');
 }
 
-function abrirVenta() {
-  const sel = document.getElementById('mv-proyecto');
-  sel.innerHTML = S.proyectos.map(p => `<option value="${p.id}" ${p.id === S.currentProyecto?.id ? 'selected':''}>${p.nombre}</option>`).join('');
-  ['mv-comprador','mv-cedula','mv-tel','mv-precio'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('mv-fecha').value = new Date().toISOString().split('T')[0];
-  openModal('modal-venta');
+async function abrirVenta(proyectoId = null) {
+  const pid = proyectoId || S.currentProyecto?.id;
+
+  if (!pid) {
+    // Si no hay proyecto activo, pedir selección
+    const proy = S.proyectos;
+    if (!proy.length) { toast('No hay proyectos creados'); return; }
+    // Usar el primer proyecto o mostrar picker
+    abrirPickerProyectoVenta();
+    return;
+  }
+
+  // Cargar unidades del proyecto si no están en memoria
+  if (!S.currentUnidades.length || S.currentProyecto?.id !== pid) {
+    const { data } = await db.from('unidades').select('*').eq('proyecto_id', pid).order('created_at');
+    S.currentUnidades = data || [];
+    S.currentProyecto = S.proyectos.find(p => p.id === pid) || S.currentProyecto;
+  }
+
+  abrirModalVenta(pid);
+}
+
+function abrirPickerProyectoVenta() {
+  // Crear modal dinámico para seleccionar proyecto
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay show';
+  overlay.id = 'picker-proyecto-temp';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">¿En qué proyecto?</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        ${S.proyectos.filter(p=>p.estado!=='vendido').map(p => {
+          const disp = S.tareas.filter(t=>t.proyecto_id===p.id).length;
+          return `<div onclick="seleccionarProyectoVenta('${p.id}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--s200);border-radius:12px;cursor:pointer;background:var(--white)">
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:14px">${p.nombre}</div>
+              ${p.ubicacion?`<div style="font-size:12px;color:var(--s400)">${p.ubicacion}</div>`:''}
+            </div>
+            <span class="badge badge-${p.estado}">${elabel(p.estado)}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="btn btn-secondary" style="width:100%" onclick="document.getElementById('picker-proyecto-temp').remove()">Cancelar</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function seleccionarProyectoVenta(pid) {
+  document.getElementById('picker-proyecto-temp')?.remove();
+  const { data } = await db.from('unidades').select('*').eq('proyecto_id', pid).order('created_at');
+  S.currentUnidades = data || [];
+  S.currentProyecto = S.proyectos.find(p => p.id === pid);
+  abrirModalVenta(pid);
 }
 
 async function guardarVenta() {
