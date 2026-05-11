@@ -619,13 +619,14 @@
         <div class="card" id="card-usuarios" style="display:none">
           <div class="section-header">
             <div class="section-title">👥 Usuarios de la empresa</div>
-            <button class="btn btn-ghost btn-sm" onclick="openModal('modal-invitar')">+ Invitar</button>
+            <button class="btn btn-ghost btn-sm" id="btn-invitar-usuario" onclick="intentarInvitar()">+ Invitar</button>
           </div>
           <div id="lista-usuarios-empresa"></div>
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s100)">
-            <div style="font-size:11px;color:var(--s400)">
+            <div style="font-size:11px;color:var(--s400);margin-bottom:6px">
               <strong>Admin:</strong> acceso total · <strong>Operador:</strong> registrar gastos/tareas, sin eliminar proyectos · <strong>Contratista:</strong> solo visualización
             </div>
+            <div id="usuarios-limite-info" style="font-size:11px;font-weight:500"></div>
           </div>
         </div>
 
@@ -2694,6 +2695,41 @@ async function cargarUsuariosEmpresa() {
       </div>`).join('');
   }
   lista.innerHTML = html || '<p style="font-size:13px;color:var(--s400);padding:8px 0">Solo tú eres el administrador por ahora.</p>';
+
+  // Mostrar info de límite de usuarios
+  const plan = S.empresa?.plan || 'free';
+  const limiteUsers = LIMITES_USUARIOS[plan] || 1;
+  const actuales = (usuarios||[]).length;
+  const infoEl = document.getElementById('usuarios-limite-info');
+  if (infoEl) {
+    const color = actuales >= limiteUsers ? 'var(--red)' : 'var(--green)';
+    const planLabel = plan === 'free' ? 'Plan Free: 1 usuario máximo — actualiza para invitar colaboradores' : `${actuales} de ${limiteUsers} usuarios usados (Plan ${capFirst(plan)})`;
+    infoEl.style.color = color;
+    infoEl.textContent = planLabel;
+  }
+}
+
+const LIMITES_USUARIOS = { free: 1, basico: 3, premium: 10 };
+
+async function intentarInvitar() {
+  const plan = S.empresa?.plan || 'free';
+  const limiteUsers = LIMITES_USUARIOS[plan] || 1;
+
+  if (plan === 'free') {
+    toast('⚠️ El plan Free no permite invitar usuarios. Actualiza al plan Básico ($12/mes) para agregar hasta 3 usuarios.');
+    return;
+  }
+
+  // Contar usuarios actuales
+  const { data: usuarios } = await db.from('profiles').select('id').eq('empresa_id', S.empresa.id);
+  const actuales = (usuarios || []).length;
+
+  if (actuales >= limiteUsers) {
+    toast(`⚠️ Tu plan ${capFirst(plan)} permite máximo ${limiteUsers} usuario${limiteUsers!==1?'s':''}. Actualiza tu plan para agregar más.`);
+    return;
+  }
+
+  openModal('modal-invitar');
 }
 
 async function guardarInvitacion() {
