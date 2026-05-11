@@ -1300,23 +1300,26 @@ async function iniciar() {
 
 function actualizarUI() {
   const ini = (S.profile.nombre || 'U')[0].toUpperCase();
-  document.getElementById('topbar-empresa').textContent = S.empresa.nombre;
+  const esSA = S.user?.email === SUPERADMIN_EMAIL;
+  const empresaNombre = esSA ? 'Edifika Platform' : S.empresa.nombre;
+  const rolLabel = esSA ? 'Superadmin' : capFirst(S.profile.rol || 'admin');
+
+  document.getElementById('topbar-empresa').textContent = empresaNombre;
   document.getElementById('user-avatar').textContent = ini;
   document.getElementById('perfil-av').textContent = ini;
   document.getElementById('perfil-nombre').textContent = S.profile.nombre;
-  document.getElementById('perfil-rol').textContent = capFirst(S.profile.rol || 'admin');
-  document.getElementById('perfil-empresa').textContent = S.empresa.nombre;
-  document.getElementById('perfil-plan').textContent = capFirst(S.empresa.plan || 'free');
+  document.getElementById('perfil-rol').textContent = rolLabel;
+  document.getElementById('perfil-empresa').textContent = empresaNombre;
+  document.getElementById('perfil-plan').textContent = esSA ? 'Superadmin ⭐' : capFirst(S.empresa.plan || 'free');
   document.getElementById('perfil-email').textContent = S.user.email;
-  // Sidebar
   const sbAv = document.getElementById('sb-avatar');
   if(sbAv) sbAv.textContent = ini;
   const sbNom = document.getElementById('sb-nombre');
   if(sbNom) sbNom.textContent = S.profile.nombre;
   const sbRol = document.getElementById('sb-rol');
-  if(sbRol) sbRol.textContent = capFirst(S.profile.rol||'admin');
+  if(sbRol) sbRol.textContent = rolLabel;
   const sbEmp = document.getElementById('sb-empresa');
-  if(sbEmp) sbEmp.textContent = S.empresa.nombre;
+  if(sbEmp) sbEmp.textContent = empresaNombre;
   // Permisos y usuarios se aplican después de cargar datos (ver iniciar())
 }
 
@@ -2614,8 +2617,8 @@ function aplicarPermisos() {
   const limiteTexto = limite >= 99999 ? `${usados} (ilimitados)` : `${usados} de ${limite} usados`;
   const el = document.getElementById('perfil-proyectos-uso');
   if (el) el.textContent = limiteTexto;
-  // Ocultar card upgrade si plan es premium
-  if (S.empresa?.plan === 'premium') {
+  // Ocultar card upgrade si plan es premium o es superadmin
+  if (S.empresa?.plan === 'premium' || esSuperadmin()) {
     document.getElementById('card-upgrade')?.style?.setProperty('display','none');
   }
   // Texto upgrade
