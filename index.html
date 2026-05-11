@@ -278,6 +278,21 @@
     .sb-item.active{background:rgba(245,158,11,0.15);color:var(--amber)}
     .sb-item.active svg{stroke:var(--amber)}
     .sb-item:not(.active) svg{stroke:var(--s400)}
+    /* ── UNIDADES ── */
+    .unidades-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:4px}
+    .unidad-card{border:1.5px solid var(--s200);border-radius:12px;padding:12px;cursor:pointer;transition:all .15s;background:var(--white);-webkit-tap-highlight-color:transparent}
+    .unidad-card:hover{border-color:var(--amber);box-shadow:0 2px 8px rgba(245,158,11,.12)}
+    .unidad-card.vendida{border-color:#D1FAE5;background:#F0FDF4;cursor:default}
+    .unidad-card.reservada{border-color:#FEF3C7;background:#FFFBEB}
+    .unidad-card.disponible{border-color:var(--s200)}
+    .unidad-id{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--dark2);margin-bottom:3px}
+    .unidad-tipo{font-size:11px;color:var(--s400);margin-bottom:6px}
+    .unidad-precio{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--dark2)}
+    .unidad-area{font-size:11px;color:var(--s400)}
+    .badge-disponible{background:#DBEAFE;color:#1D4ED8}
+    .badge-reservada{background:#FEF3C7;color:#92400E}
+    .badge-vendida{background:#D1FAE5;color:#065F46}
+    .badge-arrendada{background:#EDE9FE;color:#5B21B6}
   </style>
 </head>
 <body>
@@ -485,7 +500,7 @@
 
         <div class="card">
           <div class="section-header">
-            <div class="section-title">Últimos gastos</div>
+            <div class="section-title">Gastos adicionales / Imprevistos</div>
             <button class="btn btn-ghost btn-sm" onclick="abrirGasto()">+ Registrar</button>
           </div>
           <div id="det-gastos"></div>
@@ -600,8 +615,18 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="mp-title">Nuevo proyecto</div>
     <input type="hidden" id="mp-edit-id">
-    <div class="form-group"><label class="form-label-light">Nombre del proyecto *</label><input type="text" id="mp-nombre" class="form-input-light" placeholder="Ej: Casa Familia García"></div>
-    <div class="form-group"><label class="form-label-light">Ubicación</label><input type="text" id="mp-ubicacion" class="form-input-light" placeholder="Ej: Calle Los Ceibos, Ibarra"></div>
+    <div class="form-group"><label class="form-label-light">Nombre del proyecto *</label><input type="text" id="mp-nombre" class="form-input-light" placeholder="Ej: Jardines del Sur"></div>
+    <div class="form-group"><label class="form-label-light">Tipo de obra *</label>
+      <select id="mp-tipo" class="form-input-light">
+        <option value="conjunto">🏘️ Conjunto habitacional</option>
+        <option value="casa">🏠 Casa individual</option>
+        <option value="edificio">🏢 Edificio (deptos/locales)</option>
+        <option value="comercial">🏪 Proyecto comercial</option>
+        <option value="mixto">🏗️ Proyecto mixto</option>
+        <option value="otro">📐 Otro</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label-light">Ubicación</label><input type="text" id="mp-ubicacion" class="form-input-light" placeholder="Ej: Calle Los Galeanos, Ibarra"></div>
     <div class="form-group"><label class="form-label-light">Estado</label>
       <select id="mp-estado" class="form-input-light">
         <option value="planificacion">Planificación</option>
@@ -739,6 +764,102 @@
   </div>
 </div>
 
+<!-- Modal: Nueva Unidad -->
+<div class="modal-overlay" id="modal-nueva-unidad">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Agregar unidad vendible</div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Tipo *</label>
+        <select id="nu-tipo" class="form-input-light">
+          <option value="casa">🏠 Casa</option>
+          <option value="departamento">🏢 Departamento</option>
+          <option value="local_comercial">🏪 Local comercial</option>
+          <option value="oficina">💼 Oficina</option>
+          <option value="bodega">📦 Bodega</option>
+          <option value="parqueadero">🚗 Parqueadero</option>
+          <option value="otro">📐 Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label-light">Identificador *</label>
+        <input type="text" id="nu-id" class="form-input-light" placeholder="Casa 1, Depto 101...">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Área (m²)</label>
+        <input type="number" id="nu-area" class="form-input-light" placeholder="0">
+      </div>
+      <div class="form-group"><label class="form-label-light">Piso</label>
+        <input type="number" id="nu-piso" class="form-input-light" placeholder="1">
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label-light">Precio base ($)</label>
+      <input type="number" id="nu-precio" class="form-input-light" placeholder="0.00">
+    </div>
+    <div class="form-group"><label class="form-label-light">Notas</label>
+      <input type="text" id="nu-notas" class="form-input-light" placeholder="Vista al jardín, esquinera...">
+    </div>
+    <div style="background:var(--s50);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--s600)">
+      💡 Puedes agregar todas las unidades del proyecto. Cada una se venderá por separado.
+    </div>
+    <div id="nu-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-nueva-unidad')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-nu" onclick="guardarUnidad()">Agregar unidad</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Registrar venta de unidad -->
+<div class="modal-overlay" id="modal-venta-unidad">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mvu-title">Registrar venta</div>
+    <input type="hidden" id="mvu-unidad-id">
+    <div style="background:var(--s50);border-radius:10px;padding:12px 14px;margin-bottom:16px" id="mvu-unidad-info"></div>
+    <div class="form-group"><label class="form-label-light">Nombre del comprador *</label>
+      <input type="text" id="mvu-comprador" class="form-input-light" placeholder="Nombre completo">
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Cédula</label>
+        <input type="text" id="mvu-cedula" class="form-input-light" placeholder="0000000000">
+      </div>
+      <div class="form-group"><label class="form-label-light">Teléfono</label>
+        <input type="text" id="mvu-tel" class="form-input-light" placeholder="0990000000">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Precio de venta ($) *</label>
+        <input type="number" id="mvu-precio" class="form-input-light" placeholder="0.00">
+      </div>
+      <div class="form-group"><label class="form-label-light">Fecha</label>
+        <input type="date" id="mvu-fecha" class="form-input-light">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Forma de pago</label>
+        <select id="mvu-forma" class="form-input-light">
+          <option value="contado">Contado</option>
+          <option value="credito_directo">Crédito directo</option>
+          <option value="hipotecario">Hipotecario</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label-light">Estado</label>
+        <select id="mvu-estado" class="form-input-light">
+          <option value="negociando">Negociando</option>
+          <option value="cerrada">Cerrada</option>
+          <option value="escriturada">Escriturada</option>
+        </select>
+      </div>
+    </div>
+    <div id="mvu-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-venta-unidad')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-mvu" onclick="guardarVentaUnidad()">Registrar venta</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Completar tarea (pedir costo real) -->
 <div class="modal-overlay" id="modal-completar">
   <div class="modal">
@@ -834,7 +955,7 @@ const db = supabase.createClient(SURL, SKEY, {
 let S = {
   user: null, profile: null, empresa: null,
   proyectos: [], gastos: [], ventas: [],
-  currentProyecto: null, currentFases: [], currentTareas: [],
+  currentProyecto: null, currentFases: [], currentTareas: [], currentUnidades: [],
   openFases: new Set(),
   pfiltro: 'todos', gfiltro: 'todos'
 };
@@ -1034,13 +1155,15 @@ async function verProyecto(id) {
   if (!p) return;
   S.currentProyecto = p;
 
-  const [{ data: fases }, { data: tareas }] = await Promise.all([
+  const [{ data: fases }, { data: tareas }, { data: unidades }] = await Promise.all([
     db.from('fases').select('*').eq('proyecto_id', id).order('orden'),
-    db.from('tareas').select('*').eq('proyecto_id', id).order('created_at')
+    db.from('tareas').select('*').eq('proyecto_id', id).order('created_at'),
+    db.from('unidades').select('*').eq('proyecto_id', id).order('created_at')
   ]);
 
   S.currentFases = fases || [];
   S.currentTareas = tareas || [];
+  S.currentUnidades = unidades || [];
 
   document.getElementById('det-nombre').textContent = p.nombre;
   document.getElementById('det-ubicacion').textContent = p.ubicacion || '';
@@ -1125,17 +1248,152 @@ async function verProyecto(id) {
   const ult = gastosP.slice(0, 5);
   gEl.innerHTML = ult.length ? ult.map(g => gastoHTML(g, false)).join('') : '<p style="font-size:13px;color:var(--s400);padding:4px 0">Sin gastos adicionales.</p>';
 
-  // Venta
-  const venta = S.ventas.find(v => v.proyecto_id === id);
-  const vEl = document.getElementById('det-venta');
-  document.getElementById('btn-nueva-venta').style.display = venta ? 'none' : '';
-  vEl.innerHTML = venta ? `<div style="display:flex;justify-content:space-between;align-items:center">
-    <div><div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--green)">${fmt(venta.precio)}</div>
-    <div style="font-size:12px;color:var(--s400);margin-top:2px">${venta.comprador_nombre} · ${flabel(venta.forma_pago)}</div></div>
-    <span class="badge badge-${venta.estado}">${vlabel(venta.estado)}</span></div>` :
-    '<p style="font-size:13px;color:var(--s400)">Sin venta registrada para este proyecto.</p>';
+  // Unidades
+  renderUnidades(unidades || []);
 
   showView('proyecto-detalle');
+}
+
+// ══════════════════════════════════════════════
+// UNIDADES
+// ══════════════════════════════════════════════
+const tipoLabel = { casa:'Casa', departamento:'Departamento', local_comercial:'Local comercial', oficina:'Oficina', bodega:'Bodega', parqueadero:'Parqueadero', otro:'Otro' };
+const tipoIcon = { casa:'🏠', departamento:'🏢', local_comercial:'🏪', oficina:'💼', bodega:'📦', parqueadero:'🚗', otro:'📐' };
+
+function renderUnidades(unidades) {
+  const el = document.getElementById('det-unidades');
+  const resEl = document.getElementById('det-unidades-resumen');
+  if (!el) return;
+
+  if (!unidades.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--s400)">No hay unidades definidas. Agrega las casas, departamentos o locales de este proyecto.</p>';
+    resEl.style.display = 'none';
+    return;
+  }
+
+  const disponibles = unidades.filter(u => u.estado === 'disponible').length;
+  const reservadas = unidades.filter(u => u.estado === 'reservada').length;
+  const vendidas = unidades.filter(u => u.estado === 'vendida').length;
+  const totalIngresos = S.ventas.filter(v => unidades.find(u => u.id === v.unidad_id)).reduce((a,b) => a + +b.precio, 0);
+
+  el.innerHTML = `<div class="unidades-grid">${unidades.map(u => {
+    const venta = S.ventas.find(v => v.unidad_id === u.id);
+    return `<div class="unidad-card ${u.estado}" onclick="clickUnidad('${u.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <span style="font-size:18px">${tipoIcon[u.tipo]||'📐'}</span>
+        <span class="badge badge-${u.estado}" style="font-size:10px;padding:2px 8px">${estadoUnidadLabel(u.estado)}</span>
+      </div>
+      <div class="unidad-id">${u.identificador}</div>
+      <div class="unidad-tipo">${tipoLabel[u.tipo]||u.tipo}${u.area_m2?' · '+u.area_m2+'m²':''}</div>
+      ${u.precio_base ? `<div class="unidad-precio">${fmt(u.precio_base)}</div>` : ''}
+      ${venta ? `<div style="font-size:11px;color:var(--green);margin-top:4px;font-weight:500">${venta.comprador_nombre}</div>` : ''}
+      ${u.estado === 'disponible' ? `<div style="font-size:11px;color:var(--amber-d);margin-top:6px;font-weight:600">Toca para vender →</div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+
+  resEl.style.display = 'flex';
+  resEl.style.gap = '16px';
+  resEl.style.flexWrap = 'wrap';
+  resEl.innerHTML = `
+    <div style="font-size:12px;color:var(--s600)">Total: <strong>${unidades.length}</strong></div>
+    <div style="font-size:12px;color:var(--blue)">Disponibles: <strong>${disponibles}</strong></div>
+    ${reservadas ? `<div style="font-size:12px;color:var(--amber-d)">Reservadas: <strong>${reservadas}</strong></div>` : ''}
+    <div style="font-size:12px;color:var(--green)">Vendidas: <strong>${vendidas}</strong></div>
+    ${totalIngresos ? `<div style="font-size:12px;color:var(--green);font-weight:600">Ingresos: ${fmt(totalIngresos)}</div>` : ''}
+  `;
+}
+
+function estadoUnidadLabel(e) {
+  return { disponible:'Disponible', reservada:'Reservada', vendida:'Vendida', arrendada:'Arrendada' }[e] || e;
+}
+
+function clickUnidad(unidadId) {
+  const u = S.currentUnidades.find(x => x.id === unidadId);
+  if (!u) return;
+  if (u.estado === 'vendida') { toast('Esta unidad ya fue vendida'); return; }
+  // Abrir modal de venta para esta unidad
+  document.getElementById('mvu-unidad-id').value = unidadId;
+  document.getElementById('mvu-title').textContent = `Vender: ${u.identificador}`;
+  document.getElementById('mvu-unidad-info').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:28px">${tipoIcon[u.tipo]||'📐'}</span>
+      <div>
+        <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--dark2)">${u.identificador} — ${tipoLabel[u.tipo]||u.tipo}</div>
+        ${u.area_m2 ? `<div style="font-size:12px;color:var(--s400)">${u.area_m2} m²${u.piso?' · Piso '+u.piso:''}</div>` : ''}
+        ${u.precio_base ? `<div style="font-size:13px;font-weight:600;color:var(--amber-d);margin-top:2px">Precio base: ${fmt(u.precio_base)}</div>` : ''}
+      </div>
+    </div>`;
+  document.getElementById('mvu-precio').value = u.precio_base || '';
+  document.getElementById('mvu-comprador').value = '';
+  document.getElementById('mvu-cedula').value = '';
+  document.getElementById('mvu-tel').value = '';
+  document.getElementById('mvu-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mvu-forma').value = 'contado';
+  document.getElementById('mvu-estado').value = 'negociando';
+  document.getElementById('mvu-error').classList.remove('show');
+  openModal('modal-venta-unidad');
+}
+
+async function guardarUnidad() {
+  const identificador = v('nu-id');
+  if (!identificador) return showErr('nu-error', 'El identificador es obligatorio');
+  setLoading('btn-nu', true);
+  try {
+    const { error } = await db.from('unidades').insert({
+      proyecto_id: S.currentProyecto.id,
+      empresa_id: S.empresa.id,
+      tipo: v('nu-tipo'),
+      identificador,
+      area_m2: parseFloat(v('nu-area')) || null,
+      piso: parseInt(v('nu-piso')) || null,
+      precio_base: parseFloat(v('nu-precio')) || 0,
+      notas: v('nu-notas') || null,
+      estado: 'disponible'
+    });
+    if (error) throw error;
+    closeModal('modal-nueva-unidad');
+    ['nu-id','nu-area','nu-piso','nu-precio','nu-notas'].forEach(id => document.getElementById(id).value = '');
+    toast('Unidad agregada ✓');
+    await verProyecto(S.currentProyecto.id);
+    restoreOpenFases();
+  } catch(e) { showErr('nu-error', 'Error al guardar'); console.error(e); }
+  setLoading('btn-nu', false);
+}
+
+async function guardarVentaUnidad() {
+  const unidadId = document.getElementById('mvu-unidad-id').value;
+  const comprador = v('mvu-comprador');
+  const precio = parseFloat(v('mvu-precio'));
+  if (!comprador || !precio) return showErr('mvu-error', 'Nombre del comprador y precio son obligatorios');
+
+  setLoading('btn-mvu', true);
+  try {
+    // Registrar venta
+    const { error: e1 } = await db.from('ventas').insert({
+      proyecto_id: S.currentProyecto.id,
+      empresa_id: S.empresa.id,
+      unidad_id: unidadId,
+      comprador_nombre: comprador,
+      comprador_cedula: v('mvu-cedula') || null,
+      comprador_telefono: v('mvu-tel') || null,
+      precio,
+      forma_pago: v('mvu-forma'),
+      fecha_cierre: v('mvu-fecha') || null,
+      estado: v('mvu-estado')
+    });
+    if (e1) throw e1;
+
+    // Actualizar estado de la unidad
+    const nuevoEstado = v('mvu-estado') === 'negociando' ? 'reservada' : 'vendida';
+    await db.from('unidades').update({ estado: nuevoEstado }).eq('id', unidadId);
+
+    closeModal('modal-venta-unidad');
+    toast('Venta registrada ✓');
+    await cargarVentas();
+    await verProyecto(S.currentProyecto.id);
+    restoreOpenFases();
+  } catch(e) { showErr('mvu-error', 'Error al registrar venta'); console.error(e); }
+  setLoading('btn-mvu', false);
 }
 
 function toggleFase(bodyId, chevId) {
@@ -1362,7 +1620,7 @@ async function guardarProyecto() {
   const nombre = v('mp-nombre');
   if (!nombre) return showErr('mp-error', 'El nombre es obligatorio');
   const editId = v('mp-edit-id');
-  const data = { nombre, ubicacion: v('mp-ubicacion') || null, estado: v('mp-estado'), presupuesto: parseFloat(v('mp-presupuesto')) || 0, fecha_inicio: v('mp-inicio') || null, fecha_entrega: v('mp-entrega') || null, empresa_id: S.empresa.id };
+  const data = { nombre, tipo: v('mp-tipo') || 'conjunto', ubicacion: v('mp-ubicacion') || null, estado: v('mp-estado'), presupuesto: parseFloat(v('mp-presupuesto')) || 0, fecha_inicio: v('mp-inicio') || null, fecha_entrega: v('mp-entrega') || null, empresa_id: S.empresa.id };
   setLoading('btn-mp', true);
   if (editId) { await db.from('proyectos').update(data).eq('id', editId); toast('Proyecto actualizado ✓'); }
   else { await db.from('proyectos').insert(data); toast('Proyecto creado ✓'); }
@@ -1614,6 +1872,7 @@ function openModal(id) {
     document.getElementById('mp-edit-id').value = '';
     ['mp-nombre','mp-ubicacion','mp-presupuesto','mp-inicio','mp-entrega'].forEach(i => document.getElementById(i).value = '');
     document.getElementById('mp-estado').value = 'planificacion';
+    document.getElementById('mp-tipo').value = 'conjunto';
   }
 }
 
