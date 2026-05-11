@@ -1644,26 +1644,25 @@ function actualizarSummaryBar() {
 
 function editarProyectoActual() {
   const p = S.currentProyecto;
+  openModal('modal-proyecto');
   document.getElementById('mp-title').textContent = 'Editar proyecto';
   document.getElementById('mp-edit-id').value = p.id;
-  document.getElementById('mp-nombre').value = p.nombre;
+  document.getElementById('mp-nombre').value = p.nombre || '';
   document.getElementById('mp-tipo').value = p.tipo || 'conjunto';
   document.getElementById('mp-ubicacion').value = p.ubicacion || '';
-  // Render checkboxes for current tipo
-  const tipoSel2 = document.getElementById('mp-tipo');
-  tipoSel2.onchange = () => renderUnidadCheckboxes(tipoSel2.value);
-  const existingCount = S.currentUnidades ? S.currentUnidades.length : 0;
-  const existingTipos = S.currentUnidades ? [...new Set(S.currentUnidades.map(u=>u.tipo))] : [];
-  renderUnidadCheckboxes(p.tipo || 'conjunto', existingTipos);
-  if (existingCount > 0) {
-    const nota = document.getElementById('mp-unidades-nota');
-    if (nota) nota.textContent = `Este proyecto ya tiene ${existingCount} unidad${existingCount!==1?'es':''} definida${existingCount!==1?'s':''}. Al marcar nuevos tipos y guardar, se agregarán más unidades sin borrar las existentes.`;
-  }
-  document.getElementById('mp-estado').value = p.estado;
+  document.getElementById('mp-estado').value = p.estado || 'planificacion';
   document.getElementById('mp-presupuesto').value = p.presupuesto || '';
   document.getElementById('mp-inicio').value = p.fecha_inicio || '';
   document.getElementById('mp-entrega').value = p.fecha_entrega || '';
-  openModal('modal-proyecto');
+  const existingCount = S.currentUnidades ? S.currentUnidades.length : 0;
+  const existingTipos = S.currentUnidades ? [...new Set(S.currentUnidades.map(u=>u.tipo))] : [];
+  renderUnidadCheckboxes(p.tipo || 'conjunto', existingTipos);
+  const tipoSel2 = document.getElementById('mp-tipo');
+  tipoSel2.onchange = () => renderUnidadCheckboxes(tipoSel2.value);
+  if (existingCount > 0) {
+    const nota = document.getElementById('mp-unidades-nota');
+    if (nota) nota.textContent = `Este proyecto ya tiene ${existingCount} unidad${existingCount!==1?'es':''} definida${existingCount!==1?'s':''}. Al marcar nuevos tipos se agregarán más sin borrar las existentes.`;
+  }
 }
 
 async function eliminarProyectoActual() {
