@@ -1119,28 +1119,47 @@ async function cargarProyectos() {
   S.proyectos = data || [];
 }
 
+function calcGastado(proyectoId) {
+  const gastosAd = S.gastos.filter(g => g.proyecto_id === proyectoId).reduce((a,b) => a + +b.monto, 0);
+  const tareasR = S.tareas.filter(t => t.proyecto_id === proyectoId).reduce((a,b) => a + (+b.costo_real||0), 0);
+  return gastosAd + tareasR;
+}
+
 function renderProyectos(list) {
   const el = document.getElementById('lista-proyectos');
   if (!list.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><h3>Sin proyectos aún</h3><p>Crea tu primer proyecto para comenzar</p><button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo proyecto</button></div>`; return; }
-  el.innerHTML = list.map(p => {
-    const total = S.gastos.filter(g => g.proyecto_id === p.id).reduce((a,b) => a + +b.monto, 0);
-    const pct = p.presupuesto > 0 ? Math.min((total / p.presupuesto) * 100, 100) : 0;
-    const over = p.presupuesto > 0 && total > p.presupuesto;
-    return `<div class="proyecto-card" onclick="verProyecto('${p.id}')">
-      <div class="proyecto-card-top">
-        <div style="flex:1;min-width:0;margin-right:8px">
-          <div class="proyecto-nombre">${p.nombre}</div>
+  el.innerHTML = list.map(p => proyectoCardHTML(p)).join('');
+}
+
+function proyectoCardHTML(p) {
+  const total = calcGastado(p.id);
+  const pct = p.presupuesto > 0 ? Math.min((total / p.presupuesto) * 100, 100) : 0;
+  const over = p.presupuesto > 0 && total > p.presupuesto;
+  const venta = S.ventas.find(v => v.proyecto_id === p.id);
+  const diasRestantes = p.fecha_entrega ? Math.ceil((new Date(p.fecha_entrega)-new Date())/(1000*60*60*24)) : null;
+  const tipoLabels = {conjunto:'Conjunto',casa:'Casa',edificio:'Edificio',comercial:'Comercial',mixto:'Mixto',otro:'Obra'};
+  return `<div class="proyecto-card" onclick="verProyecto('${p.id}')">
+    <div class="proyecto-card-top">
+      <div style="flex:1;min-width:0;margin-right:10px">
+        <div class="proyecto-nombre">${p.nombre}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:2px">
           ${p.ubicacion ? `<div class="proyecto-ubicacion">📍 ${p.ubicacion}</div>` : ''}
+          ${p.tipo ? `<span style="font-size:10px;background:var(--s100);color:var(--s600);padding:2px 7px;border-radius:10px;font-weight:600">${tipoLabels[p.tipo]||p.tipo}</span>` : ''}
         </div>
-        <span class="badge badge-${p.estado}">${elabel(p.estado)}</span>
       </div>
-      <div class="proyecto-meta">
-        <div class="proyecto-meta-item">Gastado: <strong>${fmt(total)}</strong></div>
-        ${p.presupuesto ? `<div class="proyecto-meta-item">Presupuesto: <strong>${fmt(p.presupuesto)}</strong></div>` : ''}
-      </div>
-      ${p.presupuesto ? `<div class="progress-wrap"><div class="progress-label"><span>Ejecución</span><span style="color:${over?'var(--red)':'inherit'}">${pct.toFixed(0)}%${over?' ⚠️':''}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${over?'var(--red)':'var(--amber)'}"></div></div></div>` : ''}
-    </div>`;
-  }).join('');
+      <span class="badge badge-${p.estado}">${elabel(p.estado)}</span>
+    </div>
+    <div class="proyecto-meta" style="margin-top:10px;flex-wrap:wrap">
+      <div class="proyecto-meta-item">💰 Gastado: <strong style="color:${total>0?'var(--dark2)':'var(--s400)'}">${fmt(total)}</strong></div>
+      ${p.presupuesto ? `<div class="proyecto-meta-item">📋 Presupuesto: <strong>${fmt(p.presupuesto)}</strong></div>` : ''}
+      ${venta ? `<div class="proyecto-meta-item">🏠 Venta: <strong style="color:var(--green)">${fmt(venta.precio)}</strong></div>` : ''}
+      ${diasRestantes !== null ? `<div class="proyecto-meta-item" style="color:${diasRestantes<0?'var(--red)':diasRestantes<30?'var(--amber-d)':'var(--s600)'}">📅 ${diasRestantes<0?'Vencido '+Math.abs(diasRestantes)+'d':diasRestantes+' días rest.'}</div>` : ''}
+    </div>
+    ${p.presupuesto && total > 0 ? `<div class="progress-wrap" style="margin-top:10px">
+      <div class="progress-label"><span>Ejecución presupuestal</span><span style="color:${over?'var(--red)':'var(--s600)'}">${pct.toFixed(1)}%${over?' ⚠️ EXCEDIDO':''}</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${over?'var(--red)':pct>80?'var(--amber)':'var(--green)'}"></div></div>
+    </div>` : ''}
+  </div>`;
 }
 
 function filtrarProyectos(f, el) {
@@ -1609,6 +1628,7 @@ function editarProyectoActual() {
   document.getElementById('mp-title').textContent = 'Editar proyecto';
   document.getElementById('mp-edit-id').value = p.id;
   document.getElementById('mp-nombre').value = p.nombre;
+  document.getElementById('mp-tipo').value = p.tipo || 'conjunto';
   document.getElementById('mp-ubicacion').value = p.ubicacion || '';
   document.getElementById('mp-estado').value = p.estado;
   document.getElementById('mp-presupuesto').value = p.presupuesto || '';
@@ -1797,9 +1817,7 @@ function renderDashboard() {
   document.getElementById('dashboard-greeting').textContent = `${saludo}, ${(S.profile?.nombre||'').split(' ')[0]}`;
 
   const activos = S.proyectos.filter(p => ['planificacion','construccion'].includes(p.estado)).length;
-  const gastosAd = S.gastos.reduce((a,b) => a + +b.monto, 0);
-  const tareasReal = S.tareas.reduce((a,b) => a + (+b.costo_real||0), 0);
-  const invertido = gastosAd + tareasReal;
+  const invertido = S.proyectos.reduce((a,p) => a + calcGastado(p.id), 0);
   const cerradas = S.ventas.filter(v => v.estado !== 'negociando');
   const ingresos = cerradas.reduce((a,b) => a + +b.precio, 0);
   const utilidad = ingresos - invertido;
@@ -1816,36 +1834,12 @@ function renderDashboard() {
   const dp = document.getElementById('dash-proyectos');
   const recent = S.proyectos.slice(0, 3);
   if (!recent.length) { dp.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><h3>Sin proyectos</h3><p>Empieza creando tu primer proyecto</p><button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo proyecto</button></div>`; return; }
-  // Desktop: show all projects; mobile: last 3
+  // Use shared renderer with correct calculations
   const isMobile = window.innerWidth < 768;
   const showList = isMobile ? recent : S.proyectos;
-  dp.innerHTML = showList.length ? showList.map(p => {
-    const gastosP = S.gastos.filter(g => g.proyecto_id === p.id);
-    const totalReal = gastosP.reduce((a,b) => a + +b.monto, 0);
-    const venta = S.ventas.find(v => v.proyecto_id === p.id);
-    const pct = p.presupuesto > 0 ? Math.min((totalReal/p.presupuesto)*100,100) : 0;
-    const over = p.presupuesto > 0 && totalReal > p.presupuesto;
-    const diasRestantes = p.fecha_entrega ? Math.ceil((new Date(p.fecha_entrega)-new Date())/(1000*60*60*24)) : null;
-    return `<div class="proyecto-card" onclick="verProyecto('${p.id}')">
-      <div class="proyecto-card-top">
-        <div style="flex:1;min-width:0;margin-right:10px">
-          <div class="proyecto-nombre">${p.nombre}</div>
-          ${p.ubicacion?`<div class="proyecto-ubicacion">📍 ${p.ubicacion}</div>`:''}
-        </div>
-        <span class="badge badge-${p.estado}">${elabel(p.estado)}</span>
-      </div>
-      <div class="proyecto-meta" style="margin-top:10px">
-        <div class="proyecto-meta-item">💰 Gastado: <strong>${fmt(totalReal)}</strong></div>
-        ${p.presupuesto?`<div class="proyecto-meta-item">📋 Presupuesto: <strong>${fmt(p.presupuesto)}</strong></div>`:''}
-        ${venta?`<div class="proyecto-meta-item">🏠 Venta: <strong>${fmt(venta.precio)}</strong></div>`:''}
-        ${diasRestantes!==null?`<div class="proyecto-meta-item" style="color:${diasRestantes<0?'var(--red)':diasRestantes<30?'var(--amber-d)':'inherit'}">${diasRestantes<0?'⚠️ Vencido '+(Math.abs(diasRestantes))+'d':'📅 '+diasRestantes+' días restantes'}</div>`:''}
-      </div>
-      ${p.presupuesto?`<div class="progress-wrap" style="margin-top:10px">
-        <div class="progress-label"><span>Ejecución presupuestal</span><span style="color:${over?'var(--red)':'inherit'}">${pct.toFixed(0)}%${over?' ⚠️ EXCEDIDO':''}</span></div>
-        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${over?'var(--red)':pct>80?'var(--amber)':'var(--green)'}"></div></div>
-      </div>`:''}
-    </div>`;
-  }).join('') : `<div class="empty"><div class="empty-icon">🏗️</div><h3>Sin proyectos</h3><p>Empieza creando tu primer proyecto</p><button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo proyecto</button></div>`;
+  dp.innerHTML = showList.length
+    ? showList.map(p => proyectoCardHTML(p)).join('')
+    : `<div class="empty"><div class="empty-icon">🏗️</div><h3>Sin proyectos</h3><p>Empieza creando tu primer proyecto</p><button class="btn btn-primary btn-sm" onclick="openModal('modal-proyecto')">+ Nuevo proyecto</button></div>`;
 }
 
 // ══════════════════════════════════════════════
