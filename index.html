@@ -1368,21 +1368,40 @@ async function handleCreateEmpresa() {
   const nombre = v('empresa-nombre');
   if (!nombre) return showErr('onboard-error', 'Ingresa el nombre de tu empresa');
   setLoading('btn-empresa', true);
+  hideErr('onboard-error');
+
   try {
-    // Verificar si el perfil ya tiene empresa (evitar duplicados)
-    const { data: perfActual } = await db.from('profiles').select('empresa_id').eq('id', S.user.id).maybeSingle();
+    // 1. Verificar si ya tiene empresa
+    const { data: perfActual, error: pErr } = await db
+      .from('profiles').select('empresa_id').eq('id', S.user.id).maybeSingle();
+    console.log('[onboard] perfActual:', perfActual, 'pErr:', pErr);
+
     if (perfActual?.empresa_id) {
-      // Ya tiene empresa — solo recargar
       setLoading('btn-empresa', false);
       await iniciar(); return;
     }
-    const { data: emp, error: e1 } = await db.from('empresas').insert({ nombre, plan:'free' }).select().single();
-    if (e1) { setLoading('btn-empresa', false); return showErr('onboard-error', 'Error al crear empresa: ' + e1.message); }
-    const { error: e2 } = await db.from('profiles').update({ empresa_id: emp.id, rol:'admin' }).eq('id', S.user.id);
+
+    // 2. Crear empresa
+    const { data: emp, error: e1 } = await db
+      .from('empresas').insert({ nombre, plan:'free' }).select().single();
+    console.log('[onboard] emp:', emp, 'e1:', e1);
+    if (e1) throw new Error('Error al crear empresa: ' + e1.message);
+
+    // 3. Vincular perfil
+    const { error: e2 } = await db
+      .from('profiles').update({ empresa_id: emp.id, rol:'admin' }).eq('id', S.user.id);
+    console.log('[onboard] e2:', e2);
+    if (e2) throw new Error('Error al vincular perfil: ' + e2.message);
+
+    // 4. Continuar
     setLoading('btn-empresa', false);
-    if (e2) return showErr('onboard-error', 'Error al configurar perfil: ' + e2.message);
     await iniciar();
-  } catch(e) { setLoading('btn-empresa', false); showErr('onboard-error', 'Error inesperado: ' + e.message); }
+
+  } catch(e) {
+    console.error('[onboard] Error:', e);
+    setLoading('btn-empresa', false);
+    showErr('onboard-error', e.message || 'Error al crear la empresa. Intenta de nuevo.');
+  }
 }
 
 // ══════════════════════════════════════════════
