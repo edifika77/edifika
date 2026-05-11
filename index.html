@@ -583,8 +583,44 @@
           <div class="divider"></div>
           <div class="perfil-item"><span class="perfil-item-label">Empresa</span><span class="perfil-item-value" id="perfil-empresa"></span></div>
           <div class="perfil-item"><span class="perfil-item-label">Plan</span><span class="perfil-item-value"><span class="badge badge-construccion" id="perfil-plan">Free</span></span></div>
+          <div class="perfil-item"><span class="perfil-item-label">Proyectos</span><span class="perfil-item-value" id="perfil-proyectos-uso"></span></div>
           <div class="perfil-item"><span class="perfil-item-label">Email</span><span class="perfil-item-value" id="perfil-email" style="font-size:13px"></span></div>
         </div>
+
+        <!-- Gestión de usuarios (solo admin) -->
+        <div class="card" id="card-usuarios" style="display:none">
+          <div class="section-header">
+            <div class="section-title">👥 Usuarios de la empresa</div>
+            <button class="btn btn-ghost btn-sm" onclick="openModal('modal-invitar')">+ Invitar</button>
+          </div>
+          <div id="lista-usuarios-empresa"></div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s100)">
+            <div style="font-size:11px;color:var(--s400)">
+              <strong>Admin:</strong> acceso total · <strong>Operador:</strong> registrar gastos/tareas, sin eliminar proyectos · <strong>Contratista:</strong> solo visualización
+            </div>
+          </div>
+        </div>
+
+        <!-- Upgrade plan -->
+        <div class="card" id="card-upgrade" style="background:linear-gradient(135deg,var(--dark) 0%,#292524 100%);border:none">
+          <div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--amber);margin-bottom:6px">⚡ Actualiza tu plan</div>
+          <div style="font-size:13px;color:var(--s400);margin-bottom:14px" id="upgrade-texto">Accede a más proyectos, usuarios y funciones avanzadas.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--white)">$12<span style="font-size:11px;font-weight:400;color:var(--s400)">/mes</span></div>
+              <div style="font-size:12px;font-weight:600;color:var(--amber);margin:4px 0">Básico</div>
+              <div style="font-size:11px;color:var(--s400)">10 proyectos · 3 usuarios</div>
+              <button onclick="contactarUpgrade('basico')" style="width:100%;margin-top:8px;padding:7px;border-radius:8px;border:1px solid var(--amber);background:transparent;color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--fb)">Contratar</button>
+            </div>
+            <div style="background:rgba(245,158,11,.12);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(245,158,11,.3)">
+              <div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--white)">$20<span style="font-size:11px;font-weight:400;color:var(--s400)">/mes</span></div>
+              <div style="font-size:12px;font-weight:600;color:var(--amber);margin:4px 0">Premium ⭐</div>
+              <div style="font-size:11px;color:var(--s400)">Ilimitado · 10 usuarios</div>
+              <button onclick="contactarUpgrade('premium')" style="width:100%;margin-top:8px;padding:7px;border-radius:8px;border:none;background:var(--amber);color:var(--dark);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--fb)">Contratar</button>
+            </div>
+          </div>
+        </div>
+
         <button class="btn" style="background:var(--dark);color:var(--white);width:100%;margin-top:4px" onclick="handleLogout()">🚪 Cerrar sesión</button>
       </div>
 
@@ -663,32 +699,93 @@
   </div>
 </div>
 
-<!-- Modal Gasto -->
+<!-- Modal Gasto con factura -->
 <div class="modal-overlay" id="modal-gasto">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Registrar gasto</div>
     <div class="form-group"><label class="form-label-light">Proyecto *</label><select id="mg-proyecto" class="form-input-light"></select></div>
-    <div class="form-group"><label class="form-label-light">Descripción *</label><input type="text" id="mg-desc" class="form-input-light" placeholder="Ej: Compra de cemento"></div>
+    <div class="form-group"><label class="form-label-light">Descripción *</label><input type="text" id="mg-desc" class="form-input-light" placeholder="Ej: Compra de cemento 50 sacos"></div>
     <div class="row2">
-      <div class="form-group"><label class="form-label-light">Monto ($) *</label><input type="number" id="mg-monto" class="form-input-light" placeholder="0.00"></div>
       <div class="form-group"><label class="form-label-light">Fecha *</label><input type="date" id="mg-fecha" class="form-input-light"></div>
+      <div class="form-group"><label class="form-label-light">Categoría</label>
+        <select id="mg-cat" class="form-input-light">
+          <option value="materiales">🧱 Materiales</option>
+          <option value="mano_obra">👷 Mano de obra</option>
+          <option value="permisos">📋 Permisos y trámites</option>
+          <option value="transporte">🚛 Transporte</option>
+          <option value="imprevistos">⚠️ Imprevistos</option>
+          <option value="otros">📦 Otros</option>
+        </select>
+      </div>
     </div>
-    <div class="form-group"><label class="form-label-light">Categoría</label>
-      <select id="mg-cat" class="form-input-light">
-        <option value="materiales">🧱 Materiales</option>
-        <option value="mano_obra">👷 Mano de obra</option>
-        <option value="permisos">📋 Permisos y trámites</option>
-        <option value="transporte">🚛 Transporte</option>
-        <option value="imprevistos">⚠️ Imprevistos</option>
-        <option value="otros">📦 Otros</option>
-      </select>
+
+    <!-- Sección factura -->
+    <div style="border:1.5px solid var(--s200);border-radius:12px;padding:14px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;cursor:pointer" onclick="toggleFacturaFields()">
+        <div style="font-size:13px;font-weight:600;color:var(--dark2)">🧾 Datos de la factura</div>
+        <span style="font-size:12px;color:var(--amber-d);font-weight:500" id="factura-toggle-label">+ Agregar</span>
+      </div>
+      <div id="factura-fields" style="display:none">
+        <div class="row2" style="margin-bottom:10px">
+          <div class="form-group">
+            <label class="form-label-light">N° de factura</label>
+            <input type="text" id="mg-num-factura" class="form-input-light" placeholder="001-001-000000001">
+          </div>
+          <div class="form-group">
+            <label class="form-label-light">Fecha factura</label>
+            <input type="date" id="mg-fecha-factura" class="form-input-light">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label-light">RUC del emisor</label>
+          <input type="text" id="mg-ruc" class="form-input-light" placeholder="1234567890001">
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label-light">Razón social del emisor</label>
+          <input type="text" id="mg-razon" class="form-input-light" placeholder="Empresa o persona que emite">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 80px 1fr;gap:8px;margin-bottom:10px;align-items:end">
+          <div class="form-group" style="margin:0">
+            <label class="form-label-light">Subtotal (sin IVA) $</label>
+            <input type="number" id="mg-subtotal" class="form-input-light" placeholder="0.00" oninput="calcularTotal()">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label-light">IVA %</label>
+            <input type="number" id="mg-iva-pct" class="form-input-light" value="15" oninput="calcularTotal()">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label-light">Total factura $</label>
+            <input type="number" id="mg-total-factura" class="form-input-light" placeholder="0.00" style="background:var(--s50)" readonly>
+          </div>
+        </div>
+        <!-- Upload factura -->
+        <div class="form-group" style="margin:0">
+          <label class="form-label-light">Adjuntar factura (PDF o imagen)</label>
+          <div id="upload-area" style="border:1.5px dashed var(--s200);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border .15s" onclick="document.getElementById('mg-archivo').click()" ondragover="event.preventDefault();this.style.borderColor='var(--amber)'" ondragleave="this.style.borderColor='var(--s200)'" ondrop="handleFileDrop(event)">
+            <div style="font-size:24px;margin-bottom:4px">📄</div>
+            <div style="font-size:13px;color:var(--s600);font-weight:500">Clic o arrastra el archivo aquí</div>
+            <div style="font-size:11px;color:var(--s400);margin-top:2px">PDF, JPG o PNG — máx. 10MB</div>
+            <div id="archivo-nombre" style="margin-top:8px;font-size:12px;color:var(--amber-d);font-weight:600;display:none"></div>
+          </div>
+          <input type="file" id="mg-archivo" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="mostrarArchivoSeleccionado(this)">
+        </div>
+      </div>
     </div>
-    <div class="form-group"><label class="form-label-light">N° de factura / Comprobante</label><input type="text" id="mg-comp" class="form-input-light" placeholder="Opcional"></div>
+
+    <!-- Monto final -->
+    <div class="form-group">
+      <label class="form-label-light">Monto del gasto ($) *</label>
+      <input type="number" id="mg-monto" class="form-input-light" placeholder="0.00">
+      <div style="font-size:11px;color:var(--s400);margin-top:3px">Si ingresaste subtotal e IVA arriba, el total se pre-llena aquí automáticamente. Puedes modificarlo.</div>
+    </div>
+
     <div id="mg-error" class="error-msg"></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-gasto')">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1" id="btn-mg" onclick="guardarGasto()">Guardar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-mg" onclick="guardarGasto()">
+        <span id="btn-mg-txt">Guardar gasto</span>
+      </button>
     </div>
   </div>
 </div>
@@ -960,6 +1057,44 @@
   </div>
 </div>
 
+<!-- Modal: Invitar usuario -->
+<div class="modal-overlay" id="modal-invitar">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Invitar usuario</div>
+    <div style="background:var(--s50);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--s600)">
+      El usuario recibirá acceso a la plataforma con el rol que asignes. Debe registrarse con el mismo correo.
+    </div>
+    <div class="form-group">
+      <label class="form-label-light">Correo electrónico *</label>
+      <input type="email" id="inv-email" class="form-input-light" placeholder="correo@ejemplo.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label-light">Nombre del usuario</label>
+      <input type="text" id="inv-nombre" class="form-input-light" placeholder="Nombre completo">
+    </div>
+    <div class="form-group">
+      <label class="form-label-light">Rol *</label>
+      <select id="inv-rol" class="form-input-light">
+        <option value="operador">📝 Operador — Registra gastos, tareas y fases. No puede eliminar proyectos</option>
+        <option value="contratista">🏗️ Contratista — Solo visualización de proyectos y fases asignados</option>
+      </select>
+    </div>
+    <div style="background:var(--s50);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--dark2);margin-bottom:6px">Permisos por rol:</div>
+      <div style="font-size:11px;color:var(--s600);display:flex;flex-direction:column;gap:4px">
+        <div>📝 <strong>Operador:</strong> ver todo, registrar gastos/tareas/fases, no eliminar proyectos ni gestionar usuarios</div>
+        <div>🏗️ <strong>Contratista:</strong> ver proyectos y sus fases, sin acceso a gastos ni ventas</div>
+      </div>
+    </div>
+    <div id="inv-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-invitar')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-inv" onclick="guardarInvitacion()">Invitar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1099,6 +1234,10 @@ function actualizarUI() {
   if(sbRol) sbRol.textContent = capFirst(S.profile.rol||'admin');
   const sbEmp = document.getElementById('sb-empresa');
   if(sbEmp) sbEmp.textContent = S.empresa.nombre;
+  // Aplicar permisos según rol
+  aplicarPermisos();
+  // Cargar usuarios si es admin
+  if (puedo('gestionarUsuarios')) cargarUsuariosEmpresa();
 }
 
 // ══════════════════════════════════════════════
@@ -1905,10 +2044,22 @@ async function crearUnidadesDesdeFilas(proyectoId, filas) {
   return inserts.length;
 }
 
+const PLAN_LIMITES = { free: 1, basico: 10, premium: 99999 };
+
 async function guardarProyecto() {
   const nombre = v('mp-nombre');
   if (!nombre) return showErr('mp-error', 'El nombre es obligatorio');
   const editId = v('mp-edit-id');
+  // Verificar límite de plan solo al crear (no al editar)
+  if (!editId) {
+    const plan = S.empresa?.plan || 'free';
+    const limite = PLAN_LIMITES[plan] ?? 1;
+    if (S.proyectos.length >= limite) {
+      showErr('mp-error', `Tu plan ${capFirst(plan)} permite máximo ${limite} proyecto${limite!==1?'s':''}. Actualiza tu plan para crear más.`);
+      return;
+    }
+  }
+  
   const data = { nombre, tipo: v('mp-tipo') || 'conjunto', ubicacion: v('mp-ubicacion') || null, estado: v('mp-estado'), presupuesto: parseFloat(v('mp-presupuesto')) || 0, fecha_inicio: v('mp-inicio') || null, fecha_entrega: v('mp-entrega') || null, empresa_id: S.empresa.id };
   setLoading('btn-mp', true);
   try {
@@ -1972,15 +2123,27 @@ function gastoHTML(g, showProy = true) {
   const icons = { materiales:'🧱', mano_obra:'👷', permisos:'📋', transporte:'🚛', imprevistos:'⚠️', otros:'📦' };
   const bgs = { materiales:'#FEF3C7', mano_obra:'#EDE9FE', permisos:'#DBEAFE', transporte:'#D1FAE5', imprevistos:'#FEE2E2', otros:'#F3F4F6' };
   const proy = showProy ? S.proyectos.find(p => p.id === g.proyecto_id) : null;
-  return `<div class="gasto-item">
-    <div class="gasto-left">
-      <div class="gasto-icon" style="background:${bgs[g.categoria]||'#F3F4F6'}">${icons[g.categoria]||'📦'}</div>
-      <div style="min-width:0">
-        <div class="gasto-desc">${g.descripcion}</div>
-        <div class="gasto-meta">${proy?proy.nombre+' · ':''}${fdate(g.fecha)}</div>
+  const tieneFactura = g.numero_factura || g.ruc_emisor;
+  return `<div class="gasto-item" style="flex-direction:column;align-items:stretch;gap:0">
+    <div style="display:flex;align-items:center">
+      <div class="gasto-left" style="flex:1">
+        <div class="gasto-icon" style="background:${bgs[g.categoria]||'#F3F4F6'}">${icons[g.categoria]||'📦'}</div>
+        <div style="min-width:0">
+          <div class="gasto-desc">${g.descripcion}</div>
+          <div class="gasto-meta">${proy?proy.nombre+' · ':''}${fdate(g.fecha)}${tieneFactura?' · 🧾 Fact.':''}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+        <div class="gasto-monto">−${fmt(g.monto)}</div>
+        ${g.archivo_url?`<a href="${g.archivo_url}" target="_blank" style="font-size:10px;color:var(--amber-d);font-weight:600;text-decoration:none">📎 Ver factura</a>`:''}
       </div>
     </div>
-    <div class="gasto-monto">−${fmt(g.monto)}</div>
+    ${tieneFactura?`<div style="margin-top:6px;padding:6px 10px;background:var(--s50);border-radius:8px;font-size:11px;color:var(--s600);display:flex;gap:10px;flex-wrap:wrap">
+      ${g.numero_factura?`<span>N°: <strong>${g.numero_factura}</strong></span>`:''}
+      ${g.ruc_emisor?`<span>RUC: ${g.ruc_emisor}</span>`:''}
+      ${g.razon_social_emisor?`<span>${g.razon_social_emisor}</span>`:''}
+      ${g.subtotal_factura?`<span>Sub: ${fmt(g.subtotal_factura)} + IVA${g.iva_pct||15}%</span>`:''}
+    </div>`:''}
   </div>`;
 }
 
@@ -2004,22 +2167,55 @@ function abrirGasto() {
   const sel = document.getElementById('mg-proyecto');
   sel.innerHTML = S.proyectos.map(p => `<option value="${p.id}" ${p.id === S.currentProyecto?.id ? 'selected':''}>${p.nombre}</option>`).join('');
   document.getElementById('mg-fecha').value = new Date().toISOString().split('T')[0];
-  ['mg-desc','mg-monto','mg-comp'].forEach(id => document.getElementById(id).value = '');
+  ['mg-desc','mg-monto','mg-num-factura','mg-fecha-factura','mg-ruc','mg-razon','mg-subtotal','mg-total-factura'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('mg-iva-pct') && (document.getElementById('mg-iva-pct').value = '15');
+  document.getElementById('factura-fields') && (document.getElementById('factura-fields').style.display = 'none');
+  document.getElementById('factura-toggle-label') && (document.getElementById('factura-toggle-label').textContent = '+ Agregar');
+  document.getElementById('archivo-nombre') && (document.getElementById('archivo-nombre').style.display = 'none');
+  document.getElementById('upload-area') && (document.getElementById('upload-area').style.borderColor = 'var(--s200)');
+  archivoSeleccionado = null;
   openModal('modal-gasto');
 }
 
 async function guardarGasto() {
+  if (!puedo('registrarGasto')) return toast('No tienes permiso para registrar gastos');
   const desc = v('mg-desc'), monto = parseFloat(v('mg-monto')), fecha = v('mg-fecha');
   if (!desc || !monto || !fecha) return showErr('mg-error', 'Completa los campos obligatorios');
-  setLoading('btn-mg', true);
-  await db.from('gastos').insert({ proyecto_id: v('mg-proyecto'), empresa_id: S.empresa.id, descripcion: desc, monto, fecha, categoria: v('mg-cat'), comprobante: v('mg-comp') || null });
-  setLoading('btn-mg', false);
-  closeModal('modal-gasto');
-  toast('Gasto registrado ✓');
-  await cargarGastos();
-  renderGastos(S.gastos);
-  renderDashboard();
-  if (S.currentProyecto) await verProyecto(S.currentProyecto.id);
+
+  const btn = document.getElementById('btn-mg');
+  const txtEl = document.getElementById('btn-mg-txt');
+  btn.disabled = true; if(txtEl) txtEl.textContent = 'Guardando...';
+
+  try {
+    const gastoData = {
+      proyecto_id: v('mg-proyecto'),
+      empresa_id: S.empresa.id,
+      descripcion: desc, monto, fecha,
+      categoria: v('mg-cat'),
+      numero_factura: v('mg-num-factura') || null,
+      razon_social_emisor: v('mg-razon') || null,
+      ruc_emisor: v('mg-ruc') || null,
+      subtotal_factura: parseFloat(v('mg-subtotal')) || null,
+      iva_pct: parseFloat(v('mg-iva-pct')) || 15,
+      total_factura: parseFloat(v('mg-total-factura')) || null
+    };
+    const { data: gasto, error } = await db.from('gastos').insert(gastoData).select().single();
+    if (error) throw error;
+    // Subir archivo si hay
+    if (archivoSeleccionado && gasto) {
+      if(txtEl) txtEl.textContent = 'Subiendo factura...';
+      const url = await subirFactura(gasto.id);
+      if (url) await db.from('gastos').update({ archivo_url: url }).eq('id', gasto.id);
+    }
+    archivoSeleccionado = null;
+    closeModal('modal-gasto');
+    toast('Gasto registrado ✓');
+    await cargarGastos();
+    renderGastos(S.gastos);
+    renderDashboard();
+    if (S.currentProyecto) { await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
+  } catch(e) { showErr('mg-error', 'Error al guardar'); console.error(e); }
+  btn.disabled = false; if(txtEl) txtEl.textContent = 'Guardar gasto';
 }
 
 // ══════════════════════════════════════════════
@@ -2221,6 +2417,164 @@ document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('cli
 // HELPERS
 // ══════════════════════════════════════════════
 const v = id => document.getElementById(id).value.trim();
+
+// ══ ROLES Y PERMISOS ══
+const ROL_PERMISOS = {
+  admin:       { crearProyecto:true, editarProyecto:true, eliminarProyecto:true, registrarGasto:true, registrarVenta:true, gestionarUsuarios:true, verTodo:true },
+  operador:    { crearProyecto:true, editarProyecto:true, eliminarProyecto:false, registrarGasto:true, registrarVenta:true, gestionarUsuarios:false, verTodo:true },
+  contratista: { crearProyecto:false, editarProyecto:false, eliminarProyecto:false, registrarGasto:false, registrarVenta:false, gestionarUsuarios:false, verTodo:false }
+};
+
+function puedo(accion) {
+  const rol = S.profile?.rol || 'admin';
+  return ROL_PERMISOS[rol]?.[accion] ?? false;
+}
+
+function aplicarPermisos() {
+  const rol = S.profile?.rol || 'admin';
+  // Mostrar/ocultar según rol
+  const esAdmin = rol === 'admin';
+  const esContratista = rol === 'contratista';
+  document.getElementById('card-usuarios')?.style?.setProperty('display', esAdmin ? 'block' : 'none');
+  document.getElementById('card-upgrade')?.style?.setProperty('display', esAdmin ? 'block' : 'none');
+  // Ocultar gastos y ventas para contratistas
+  document.getElementById('nav-gastos')?.style?.setProperty('display', esContratista ? 'none' : '');
+  document.getElementById('nav-ventas')?.style?.setProperty('display', esContratista ? 'none' : '');
+  document.getElementById('sb-gastos')?.style?.setProperty('display', esContratista ? 'none' : '');
+  document.getElementById('sb-ventas')?.style?.setProperty('display', esContratista ? 'none' : '');
+  // Uso de proyectos en perfil
+  const limite = PLAN_LIMITES[S.empresa?.plan||'free'] ?? 1;
+  const limiteTexto = limite >= 99999 ? 'ilimitados' : `${S.proyectos.length} de ${limite}`;
+  const el = document.getElementById('perfil-proyectos-uso');
+  if (el) el.textContent = limiteTexto;
+  // Texto upgrade
+  const upgradeEl = document.getElementById('upgrade-texto');
+  if (upgradeEl && S.empresa?.plan === 'premium') {
+    document.getElementById('card-upgrade')?.style?.setProperty('display','none');
+  }
+}
+
+// ══ USUARIOS ══
+async function cargarUsuariosEmpresa() {
+  if (!puedo('gestionarUsuarios')) return;
+  const [{ data: usuarios }, { data: invitaciones }] = await Promise.all([
+    db.from('profiles').select('id,nombre,rol,created_at').eq('empresa_id', S.empresa.id),
+    db.from('invitaciones').select('*').eq('empresa_id', S.empresa.id).eq('estado','pendiente')
+  ]);
+  const lista = document.getElementById('lista-usuarios-empresa');
+  if (!lista) return;
+  const rolIcon = { admin:'👑', operador:'📝', contratista:'🏗️' };
+  const rolLabel = { admin:'Admin', operador:'Operador', contratista:'Contratista' };
+  let html = (usuarios||[]).map(u => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--s100)">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--dark);font-family:var(--fd);flex-shrink:0">${(u.nombre||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:500;color:var(--dark2)">${u.nombre||'Sin nombre'} ${u.id===S.user.id?'<span style="font-size:10px;color:var(--amber-d)">(tú)</span>':''}</div>
+        <div style="font-size:11px;color:var(--s400)">${rolIcon[u.rol]||''} ${rolLabel[u.rol]||u.rol}</div>
+      </div>
+      ${u.id !== S.user.id ? `<select onchange="cambiarRolUsuario('${u.id}',this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--s200);border-radius:6px;font-family:var(--fb);color:var(--dark2);background:var(--white);outline:none">
+        <option value="operador" ${u.rol==='operador'?'selected':''}>Operador</option>
+        <option value="contratista" ${u.rol==='contratista'?'selected':''}>Contratista</option>
+        <option value="admin" ${u.rol==='admin'?'selected':''}>Admin</option>
+      </select>` : ''}
+    </div>`).join('');
+  if (invitaciones?.length) {
+    html += `<div style="font-size:11px;color:var(--s400);margin-top:10px;margin-bottom:6px;font-weight:600">INVITACIONES PENDIENTES</div>`;
+    html += invitaciones.map(inv => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s100);opacity:.7">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--s200);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✉️</div>
+        <div style="flex:1"><div style="font-size:13px;color:var(--dark2)">${inv.email}</div><div style="font-size:11px;color:var(--s400)">${rolLabel[inv.rol]||inv.rol} · Pendiente</div></div>
+        <button onclick="cancelarInvitacion('${inv.id}')" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;padding:4px">✕</button>
+      </div>`).join('');
+  }
+  lista.innerHTML = html || '<p style="font-size:13px;color:var(--s400);padding:8px 0">Solo tú eres el administrador por ahora.</p>';
+}
+
+async function guardarInvitacion() {
+  const email = v('inv-email'), rol = v('inv-rol'), nombre = v('inv-nombre');
+  if (!email) return showErr('inv-error','Ingresa el correo electrónico');
+  const limite = { free:1, basico:3, premium:10 }[S.empresa?.plan||'free'] || 1;
+  const { data: usuarios } = await db.from('profiles').select('id').eq('empresa_id',S.empresa.id);
+  if ((usuarios||[]).length >= limite) return showErr('inv-error',`Tu plan permite máximo ${limite} usuario${limite!==1?'s':''}. Actualiza tu plan.`);
+  setLoading('btn-inv',true);
+  try {
+    await db.from('invitaciones').insert({ empresa_id:S.empresa.id, email, rol, estado:'pendiente' });
+    closeModal('modal-invitar');
+    toast(`Invitación registrada para ${email} ✓`);
+    document.getElementById('inv-email').value='';
+    document.getElementById('inv-nombre').value='';
+    await cargarUsuariosEmpresa();
+  } catch(e) { showErr('inv-error','Error al guardar'); }
+  setLoading('btn-inv',false);
+}
+
+async function cambiarRolUsuario(userId, nuevoRol) {
+  await db.from('profiles').update({ rol: nuevoRol }).eq('id', userId);
+  toast('Rol actualizado ✓');
+  await cargarUsuariosEmpresa();
+}
+
+async function cancelarInvitacion(id) {
+  await db.from('invitaciones').delete().eq('id', id);
+  toast('Invitación cancelada');
+  await cargarUsuariosEmpresa();
+}
+
+function contactarUpgrade(plan) {
+  const msg = encodeURIComponent(`Hola, me interesa el plan ${plan === 'premium' ? 'Premium ($20/mes)' : 'Básico ($12/mes)'} de Edifika. Mi empresa es: ${S.empresa?.nombre}`);
+  window.open(`https://wa.me/593992774892?text=${msg}`, '_blank');
+}
+
+// ══ FACTURA ══
+function toggleFacturaFields() {
+  const fields = document.getElementById('factura-fields');
+  const label = document.getElementById('factura-toggle-label');
+  const isOpen = fields.style.display !== 'none';
+  fields.style.display = isOpen ? 'none' : 'block';
+  label.textContent = isOpen ? '+ Agregar' : '− Ocultar';
+}
+
+function calcularTotal() {
+  const sub = parseFloat(document.getElementById('mg-subtotal')?.value) || 0;
+  const ivaPct = parseFloat(document.getElementById('mg-iva-pct')?.value) || 15;
+  const total = sub * (1 + ivaPct/100);
+  if (total > 0) {
+    document.getElementById('mg-total-factura').value = total.toFixed(2);
+    document.getElementById('mg-monto').value = total.toFixed(2);
+  }
+}
+
+let archivoSeleccionado = null;
+
+function mostrarArchivoSeleccionado(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { toast('El archivo supera 10MB'); input.value=''; return; }
+  archivoSeleccionado = file;
+  const el = document.getElementById('archivo-nombre');
+  el.textContent = '📎 ' + file.name;
+  el.style.display = 'block';
+  document.getElementById('upload-area').style.borderColor = 'var(--amber)';
+}
+
+function handleFileDrop(event) {
+  event.preventDefault();
+  document.getElementById('upload-area').style.borderColor = 'var(--s200)';
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  const fakeInput = { files: [file] };
+  mostrarArchivoSeleccionado(fakeInput);
+}
+
+async function subirFactura(gastoId) {
+  if (!archivoSeleccionado) return null;
+  const ext = archivoSeleccionado.name.split('.').pop();
+  const path = `${S.empresa.id}/${gastoId}.${ext}`;
+  const { data, error } = await db.storage.from('facturas-edifika').upload(path, archivoSeleccionado, { upsert: true });
+  if (error) { console.error('Upload error:', error); return null; }
+  const { data: urlData } = db.storage.from('facturas-edifika').getPublicUrl(path);
+  return urlData?.publicUrl || null;
+}
 const fmt = n => '$' + (+n||0).toLocaleString('es-EC', { minimumFractionDigits:2, maximumFractionDigits:2 });
 const fdate = d => d ? new Date(d+'T00:00:00').toLocaleDateString('es-EC',{day:'2-digit',month:'short',year:'numeric'}) : '';
 const capFirst = s => s ? s[0].toUpperCase()+s.slice(1) : '';
