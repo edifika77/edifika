@@ -205,8 +205,12 @@
     .fase-body{display:none;border-top:1px solid var(--s100)}
     .fase-body.open{display:block}
     .fase-hint{font-size:12px;color:var(--s400);padding:12px 14px;font-style:italic}
-    .tarea-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-bottom:1px solid var(--s100);background:var(--white)}
+    .tarea-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--s100);background:var(--white);transition:background .15s}
     .tarea-item:last-of-type{border-bottom:none}
+    .tarea-item.dragging{opacity:.4;background:var(--amber-l)}
+    .tarea-item.drag-over{border-top:2px solid var(--amber)}
+    .drag-handle{color:var(--s400);cursor:grab;font-size:16px;padding:2px 0;flex-shrink:0;user-select:none;touch-action:none}
+    .drag-handle:active{cursor:grabbing}
     .tarea-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--s200);flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;transition:all .2s;background:var(--white)}
     .tarea-check:hover{border-color:var(--amber)}
     .tarea-check.done{background:var(--green);border-color:var(--green);color:var(--white)}
@@ -1146,14 +1150,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (ev === 'SIGNED_OUT') { S = { user:null,profile:null,empresa:null,proyectos:[],gastos:[],ventas:[],currentFases:[],currentTareas:[],currentProyecto:null,pfiltro:'todos',gfiltro:'todos' }; showScreen('auth'); }
   });
 
-  // Event delegation - handles all dynamic onclick needs
+  // Event delegation global - ÚNICO listener para todos los clics dinámicos
   document.addEventListener('click', e => {
     // Logout dropdown
     if (e.target.closest('#btn-logout-dd')) { handleLogout(); return; }
-    // Project cards - works regardless of how they were rendered
+    // Project cards
     const card = e.target.closest('.proyecto-card[data-pid]');
-    if (card) { verProyecto(card.dataset.pid); return; }
-  });
+    if (card && card.dataset.pid) {
+      const pid = card.dataset.pid;
+      if (pid && pid.length > 10) verProyecto(pid);
+      return;
+    }
+  }, true); // useCapture=true para mayor fiabilidad
 });
 
 function setupPWA() {
@@ -1350,14 +1358,23 @@ function filtrarProyectos(f, el) {
 }
 
 async function verProyecto(id) {
-  const p = S.proyectos.find(x => x.id === id);
-  if (!p) return;
+  if (!id) return;
+  // Si los proyectos no están cargados, recargarlos
+  if (!S.proyectos.length && S.empresa) await cargarProyectos();
+  let p = S.proyectos.find(x => x.id === id);
+  if (!p) {
+    // Intentar cargar directamente desde DB
+    const { data } = await db.from('proyectos').select('*').eq('id', id).single();
+    if (!data) { toast('Proyecto no encontrado'); return; }
+    p = data;
+    if (!S.proyectos.find(x => x.id === id)) S.proyectos.unshift(p);
+  }
   S.currentProyecto = p;
 
   try {
   const [{ data: fases }, { data: tareas }, { data: unidades }] = await Promise.all([
     db.from('fases').select('*').eq('proyecto_id', id).order('orden'),
-    db.from('tareas').select('*').eq('proyecto_id', id).order('created_at'),
+    db.from('tareas').select('*').eq('proyecto_id', id).order('orden').order('created_at'),
     db.from('unidades').select('*').eq('proyecto_id', id).order('created_at')
   ]);
 
@@ -1410,11 +1427,17 @@ async function verProyecto(id) {
         </div>
         <div class="fase-body" id="fb-${fi}">
           ${tareasF.length===0 ? `<div class="fase-hint">Toca "+ Agregar tarea" para detallar los trabajos y costos de esta fase.</div>` : ''}
-          ${tareasF.map(t => `
-          <div class="tarea-item" data-tarea-id="${t.id}">
+          ${tareasF.map((t,ti) => `
+          <div class="tarea-item" data-tarea-id="${t.id}" data-orden="${t.orden||ti}"
+            draggable="true"
+            ondragstart="dragStart(event,'${t.id}','${f.id}')"
+            ondragover="dragOver(event)"
+            ondragleave="dragLeave(event)"
+            ondrop="dragDrop(event,'${f.id}')">
+            <div class="drag-handle" onclick="event.stopPropagation()" title="Arrastra para reordenar">⠿</div>
             <div class="tarea-check ${t.estado==='completada'?'done':''}"
               onclick="event.stopPropagation();toggleTarea('${t.id}')"
-              title="${t.estado==='completada'?'Clic para marcar como pendiente':'Clic para marcar como completada — te pedirá el costo real'}">
+              title="${t.estado==='completada'?'Clic para marcar como pendiente':'Clic para marcar como completada'}">
               ${t.estado==='completada'?'✓':''}
             </div>
             <div class="tarea-info">
@@ -1423,7 +1446,7 @@ async function verProyecto(id) {
               <div class="tarea-costos">
                 ${t.costo_estimado?`<span class="tarea-costo-tag tarea-est">📋 Est: ${fmt(t.costo_estimado)}</span>`:''}
                 ${t.costo_real?`<span class="tarea-costo-tag tarea-real">💰 Real: ${fmt(t.costo_real)}</span>`:''}
-                ${!t.costo_estimado&&!t.costo_real?'<span style="font-size:11px;color:var(--s400)">Sin costos registrados</span>':''}
+                ${!t.costo_estimado&&!t.costo_real?'<span style="font-size:11px;color:var(--s400)">Sin costos — edita para agregar</span>':''}
               </div>
             </div>
             <button onclick="event.stopPropagation();abrirEditarTarea('${t.id}')"
@@ -1677,6 +1700,67 @@ async function guardarVentaUnidad() {
     restoreOpenFases();
   } catch(e) { showErr('mvu-error', 'Error al registrar venta'); console.error(e); }
   setLoading('btn-mvu', false);
+}
+
+// ══ DRAG & DROP PARA REORDENAR TAREAS ══
+let dragSrcId = null;
+
+function dragStart(e, tareaId, faseId) {
+  dragSrcId = tareaId;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', tareaId);
+  setTimeout(() => { const el = document.querySelector(`[data-tarea-id="${tareaId}"]`); if(el) el.classList.add('dragging'); }, 0);
+}
+
+function dragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const item = e.target.closest('.tarea-item');
+  document.querySelectorAll('.tarea-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+  if (item && item.dataset.tareaId !== dragSrcId) item.classList.add('drag-over');
+}
+
+function dragLeave(e) {
+  const item = e.target.closest('.tarea-item');
+  if (item) item.classList.remove('drag-over');
+}
+
+async function dragDrop(e, faseId) {
+  e.preventDefault();
+  document.querySelectorAll('.tarea-item').forEach(el => { el.classList.remove('drag-over'); el.classList.remove('dragging'); });
+  const targetItem = e.target.closest('.tarea-item');
+  if (!targetItem || !dragSrcId || targetItem.dataset.tareaId === dragSrcId) return;
+
+  const targetId = targetItem.dataset.tareaId;
+  const container = targetItem.parentElement;
+  const items = Array.from(container.querySelectorAll('.tarea-item'));
+
+  // Reorder in DOM
+  const srcEl = container.querySelector(`[data-tarea-id="${dragSrcId}"]`);
+  const targetIdx = items.indexOf(targetItem);
+  const srcIdx = items.indexOf(srcEl);
+
+  if (srcIdx < targetIdx) container.insertBefore(srcEl, targetItem.nextSibling);
+  else container.insertBefore(srcEl, targetItem);
+
+  // Save new order to DB
+  const newOrder = Array.from(container.querySelectorAll('.tarea-item')).map((el, i) => ({
+    id: el.dataset.tareaId, orden: i
+  }));
+
+  // Update S.currentTareas order
+  newOrder.forEach(({ id, orden }) => {
+    const t = S.currentTareas.find(x => x.id === id);
+    if (t) t.orden = orden;
+  });
+
+  // Save to DB in batch
+  await Promise.all(newOrder.map(({ id, orden }) =>
+    db.from('tareas').update({ orden }).eq('id', id)
+  ));
+
+  dragSrcId = null;
+  toast('Orden guardado ✓');
 }
 
 function toggleFase(bodyId, chevId) {
@@ -2115,7 +2199,7 @@ async function cargarGastos() {
 }
 
 async function cargarTareas() {
-  const { data } = await db.from('tareas').select('*').eq('empresa_id', S.empresa.id);
+  const { data } = await db.from('tareas').select('*').eq('empresa_id', S.empresa.id).order('orden').order('created_at');
   S.tareas = data || [];
 }
 
