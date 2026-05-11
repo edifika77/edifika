@@ -739,6 +739,69 @@
   </div>
 </div>
 
+<!-- Modal: Completar tarea (pedir costo real) -->
+<div class="modal-overlay" id="modal-completar">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Marcar como completada</div>
+    <input type="hidden" id="mc-tarea-id">
+    <div style="background:var(--amber-l);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">📋</span>
+      <div>
+        <div style="font-size:11px;color:var(--amber-d);font-weight:600;text-transform:uppercase;letter-spacing:.4px">Costo estimado</div>
+        <div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--amber-d)" id="mc-estimado-ref">$0.00</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label-light">¿Cuánto costó realmente? ($) *</label>
+      <input type="number" id="mc-real" class="form-input-light" placeholder="0.00">
+      <div style="font-size:11px;color:var(--s400);margin-top:5px">Ingresa el valor real gastado. El estimado se conserva para comparativas.</div>
+    </div>
+    <div id="mc-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-completar')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;background:var(--green);color:white" id="btn-mc" onclick="confirmarCompletada()">✓ Completar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editar tarea -->
+<div class="modal-overlay" id="modal-editar-tarea">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar tarea</div>
+    <input type="hidden" id="et-id">
+    <div class="form-group"><label class="form-label-light">Nombre *</label><input type="text" id="et-nombre" class="form-input-light"></div>
+    <div class="form-group"><label class="form-label-light">Descripción</label><input type="text" id="et-desc" class="form-input-light"></div>
+    <div class="row2">
+      <div class="form-group">
+        <label class="form-label-light">Costo estimado ($)</label>
+        <input type="number" id="et-estimado" class="form-input-light" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label-light">Costo real ($)</label>
+        <input type="number" id="et-real" class="form-input-light" placeholder="0.00">
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label-light">Estado</label>
+      <select id="et-estado" class="form-input-light">
+        <option value="pendiente">⏸ Pendiente</option>
+        <option value="en_curso">🔨 En curso</option>
+        <option value="completada">✅ Completada</option>
+      </select>
+    </div>
+    <div style="background:var(--s50);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--s600)">
+      💡 El costo estimado se conserva siempre para comparar lo proyectado vs lo gastado.
+    </div>
+    <div id="et-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-danger btn-sm" onclick="eliminarTarea()">🗑️</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-editar-tarea')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-et" onclick="guardarEdicionTarea()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1024,18 +1087,23 @@ async function verProyecto(id) {
           ${tareasF.length===0 ? `<div class="fase-hint">Toca "+ Agregar tarea" para detallar los trabajos y costos de esta fase.</div>` : ''}
           ${tareasF.map(t => `
           <div class="tarea-item" data-tarea-id="${t.id}">
-            <div class="tarea-check ${t.estado==='completada'?'done':''}" onclick="event.stopPropagation();toggleTarea('${t.id}','${f.id}')" title="${t.estado==='completada'?'Marcar pendiente':'Marcar completada'}">
+            <div class="tarea-check ${t.estado==='completada'?'done':''}"
+              onclick="event.stopPropagation();toggleTarea('${t.id}')"
+              title="${t.estado==='completada'?'Clic para marcar como pendiente':'Clic para marcar como completada — te pedirá el costo real'}">
               ${t.estado==='completada'?'✓':''}
             </div>
             <div class="tarea-info">
               <div class="tarea-nombre ${t.estado==='completada'?'done':''}">${t.nombre}</div>
               ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:''}
               <div class="tarea-costos">
-                ${t.costo_estimado?`<span class="tarea-costo-tag tarea-est">Estimado: ${fmt(t.costo_estimado)}</span>`:''}
-                ${t.costo_real?`<span class="tarea-costo-tag tarea-real">Real: ${fmt(t.costo_real)}</span>`:''}
+                ${t.costo_estimado?`<span class="tarea-costo-tag tarea-est">📋 Est: ${fmt(t.costo_estimado)}</span>`:''}
+                ${t.costo_real?`<span class="tarea-costo-tag tarea-real">💰 Real: ${fmt(t.costo_real)}</span>`:''}
+                ${!t.costo_estimado&&!t.costo_real?'<span style="font-size:11px;color:var(--s400)">Sin costos registrados</span>':''}
               </div>
             </div>
-            <div onclick="event.stopPropagation();cambiarEstadoTarea('${t.id}','${f.id}')" style="font-size:10px;color:var(--s400);cursor:pointer;padding:4px 6px;flex-shrink:0;border-radius:6px" title="Cambiar estado">⚙️</div>
+            <button onclick="event.stopPropagation();abrirEditarTarea('${t.id}')"
+              style="flex-shrink:0;background:var(--s100);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px;color:var(--s600)"
+              title="Editar tarea">✏️</button>
           </div>`).join('')}
           <div class="fase-add-btn" onclick="abrirTarea('${f.id}')">
             <span style="font-size:18px;line-height:1">+</span> Agregar tarea a esta fase
@@ -1092,19 +1160,53 @@ function restoreOpenFases() {
   });
 }
 
-async function cambiarEstadoTarea(tareaId, faseId) {
-  const estados = ['pendiente','en_curso','completada'];
+function abrirEditarTarea(tareaId) {
   const t = S.currentTareas.find(x => x.id === tareaId);
   if (!t) return;
-  const idx = estados.indexOf(t.estado);
-  const nuevoEstado = estados[(idx+1) % 3];
-  t.estado = nuevoEstado;
-  db.from('tareas').update({ estado: nuevoEstado }).eq('id', tareaId);
-  // Solo actualizar el check y nombre en DOM
-  const checkEl = document.querySelector(`[data-tarea-id="${tareaId}"] .tarea-check`);
-  const nombreEl = document.querySelector(`[data-tarea-id="${tareaId}"] .tarea-nombre`);
-  if (checkEl) { checkEl.classList.toggle('done', nuevoEstado === 'completada'); checkEl.innerHTML = nuevoEstado === 'completada' ? '✓' : ''; }
-  if (nombreEl) nombreEl.classList.toggle('done', nuevoEstado === 'completada');
+  document.getElementById('et-id').value = t.id;
+  document.getElementById('et-nombre').value = t.nombre;
+  document.getElementById('et-desc').value = t.descripcion || '';
+  document.getElementById('et-estimado').value = t.costo_estimado || '';
+  document.getElementById('et-real').value = t.costo_real || '';
+  document.getElementById('et-estado').value = t.estado;
+  document.getElementById('et-error').classList.remove('show');
+  openModal('modal-editar-tarea');
+}
+
+async function guardarEdicionTarea() {
+  const id = document.getElementById('et-id').value;
+  const nombre = document.getElementById('et-nombre').value.trim();
+  if (!nombre) return showErr('et-error', 'El nombre es obligatorio');
+  const data = {
+    nombre,
+    descripcion: document.getElementById('et-desc').value.trim() || null,
+    costo_estimado: parseFloat(document.getElementById('et-estimado').value) || 0,
+    costo_real: parseFloat(document.getElementById('et-real').value) || 0,
+    estado: document.getElementById('et-estado').value
+  };
+  setLoading('btn-et', true);
+  try {
+    const { error } = await db.from('tareas').update(data).eq('id', id);
+    if (error) throw error;
+    const t = S.currentTareas.find(x => x.id === id);
+    if (t) Object.assign(t, data);
+    closeModal('modal-editar-tarea');
+    toast('Tarea actualizada ✓');
+    await verProyecto(S.currentProyecto.id);
+    restoreOpenFases();
+  } catch(e) { showErr('et-error', 'Error al guardar'); }
+  setLoading('btn-et', false);
+}
+
+async function eliminarTarea() {
+  const id = document.getElementById('et-id').value;
+  if (!confirm('¿Eliminar esta tarea? No se puede deshacer.')) return;
+  await db.from('tareas').delete().eq('id', id);
+  S.currentTareas = S.currentTareas.filter(t => t.id !== id);
+  closeModal('modal-editar-tarea');
+  toast('Tarea eliminada');
+  await verProyecto(S.currentProyecto.id);
+  restoreOpenFases();
 }
 
 function abrirTarea(faseId) {
@@ -1139,27 +1241,58 @@ async function guardarTarea() {
   setLoading('btn-mt', false);
 }
 
-async function toggleTarea(tareaId, faseId) {
+function toggleTarea(tareaId) {
   const tarea = S.currentTareas.find(t => t.id === tareaId);
   if (!tarea) return;
 
-  // Toggle estado
-  const nuevoEstado = tarea.estado === 'completada' ? 'pendiente' : 'completada';
-  tarea.estado = nuevoEstado;
-
-  // Actualizar DOM directamente sin re-renderizar nada
-  const checkEl = document.querySelector(`[data-tarea-id="${tareaId}"] .tarea-check`);
-  const nombreEl = document.querySelector(`[data-tarea-id="${tareaId}"] .tarea-nombre`);
-  if (checkEl) {
-    checkEl.classList.toggle('done', nuevoEstado === 'completada');
-    checkEl.innerHTML = nuevoEstado === 'completada' ? '✓' : '';
+  if (tarea.estado === 'completada') {
+    // Revertir a pendiente — no pedir confirmación, solo cambiar estado
+    tarea.estado = 'pendiente';
+    actualizarCheckDOM(tareaId, 'pendiente');
+    db.from('tareas').update({ estado: 'pendiente' }).eq('id', tareaId);
+    toast('Tarea marcada como pendiente');
+  } else {
+    // Pedir costo real antes de completar
+    document.getElementById('mc-tarea-id').value = tareaId;
+    document.getElementById('mc-estimado-ref').textContent = tarea.costo_estimado ? fmt(tarea.costo_estimado) : 'No definido';
+    document.getElementById('mc-real').value = tarea.costo_real || '';
+    document.getElementById('mc-error').classList.remove('show');
+    openModal('modal-completar');
   }
-  if (nombreEl) {
-    nombreEl.classList.toggle('done', nuevoEstado === 'completada');
-  }
+}
 
-  // Guardar en base de datos (sin bloquear la UI)
-  db.from('tareas').update({ estado: nuevoEstado }).eq('id', tareaId);
+async function confirmarCompletada() {
+  const tareaId = document.getElementById('mc-tarea-id').value;
+  const costoReal = parseFloat(document.getElementById('mc-real').value);
+  if (!costoReal || costoReal <= 0) return showErr('mc-error', 'Ingresa el costo real gastado');
+
+  setLoading('btn-mc', true);
+  try {
+    const { error } = await db.from('tareas').update({ estado: 'completada', costo_real: costoReal }).eq('id', tareaId);
+    if (error) throw error;
+    const tarea = S.currentTareas.find(t => t.id === tareaId);
+    if (tarea) { tarea.estado = 'completada'; tarea.costo_real = costoReal; }
+    closeModal('modal-completar');
+    actualizarCheckDOM(tareaId, 'completada', costoReal);
+    toast('Tarea completada ✓');
+  } catch(e) { showErr('mc-error', 'Error al guardar'); console.error(e); }
+  setLoading('btn-mc', false);
+}
+
+function actualizarCheckDOM(tareaId, estado, costoReal = null) {
+  const item = document.querySelector(`[data-tarea-id="${tareaId}"]`);
+  if (!item) return;
+  const checkEl = item.querySelector('.tarea-check');
+  const nombreEl = item.querySelector('.tarea-nombre');
+  const costosEl = item.querySelector('.tarea-costos');
+  if (checkEl) { checkEl.classList.toggle('done', estado === 'completada'); checkEl.innerHTML = estado === 'completada' ? '✓' : ''; }
+  if (nombreEl) nombreEl.classList.toggle('done', estado === 'completada');
+  if (costosEl && costoReal !== null) {
+    const tarea = S.currentTareas.find(t => t.id === tareaId);
+    let html = tarea && tarea.costo_estimado ? `<span class="tarea-costo-tag tarea-est">📋 Est: ${fmt(tarea.costo_estimado)}</span>` : '';
+    html += costoReal ? `<span class="tarea-costo-tag tarea-real">💰 Real: ${fmt(costoReal)}</span>` : '';
+    costosEl.innerHTML = html || '<span style="font-size:11px;color:var(--s400)">Sin costos registrados</span>';
+  }
 }
 
 function editarProyectoActual() {
