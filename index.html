@@ -282,6 +282,17 @@
     .sb-item.active{background:rgba(245,158,11,0.15);color:var(--amber)}
     .sb-item.active svg{stroke:var(--amber)}
     .sb-item:not(.active) svg{stroke:var(--s400)}
+    /* ── SUPERADMIN ── */
+    .sa-empresa-row{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--s100);transition:background .1s}
+    .sa-empresa-row:last-child{border-bottom:none}
+    .sa-empresa-row:hover{background:var(--s50)}
+    .plan-badge-free{background:#F3F4F6;color:#6B7280}
+    .plan-badge-basico{background:#DBEAFE;color:#1D4ED8}
+    .plan-badge-premium{background:var(--amber-l);color:var(--amber-d)}
+    .sa-stat{font-size:11px;color:var(--s400);white-space:nowrap}
+    .plan-select{font-size:12px;padding:5px 8px;border:1px solid var(--s200);border-radius:7px;font-family:var(--fb);color:var(--dark2);background:var(--white);cursor:pointer;outline:none}
+    .periodo-btn{flex:1;padding:6px 4px;border-radius:7px;border:none;background:transparent;color:var(--s400);font-size:11px;font-weight:500;cursor:pointer;font-family:var(--fb);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:2px}
+    .periodo-btn.active{background:var(--amber);color:var(--dark)}
     .ucheck-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--s200);border-radius:10px;background:var(--white);transition:border .15s}
     .ucheck-row.active{border-color:var(--amber);background:var(--amber-l)}
     .ucheck-cb{width:20px;height:20px;border-radius:5px;border:2px solid var(--s200);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;transition:all .15s;background:var(--white)}
@@ -403,6 +414,12 @@
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--white)" id="sb-nombre">Usuario</div>
             <div style="font-size:11px;color:var(--s400)" id="sb-rol">Admin</div>
+          </div>
+        </div>
+        <div id="sb-superadmin-item" style="display:none">
+          <div class="sb-item" id="sb-superadmin" onclick="navTo('superadmin')" style="color:var(--amber);background:rgba(245,158,11,0.08);margin-bottom:4px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Panel Admin
           </div>
         </div>
         <button onclick="handleLogout()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--s400);font-size:13px;cursor:pointer;font-family:var(--fb);text-align:left;display:flex;align-items:center;gap:8px">
@@ -607,25 +624,73 @@
 
         <!-- Upgrade plan -->
         <div class="card" id="card-upgrade" style="background:linear-gradient(135deg,var(--dark) 0%,#292524 100%);border:none">
-          <div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--amber);margin-bottom:6px">⚡ Actualiza tu plan</div>
-          <div style="font-size:13px;color:var(--s400);margin-bottom:14px" id="upgrade-texto">Accede a más proyectos, usuarios y funciones avanzadas.</div>
+          <div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--amber);margin-bottom:4px">⚡ Actualiza tu plan</div>
+          <div style="font-size:13px;color:var(--s400);margin-bottom:14px">Más proyectos, usuarios y funciones avanzadas.</div>
+
+          <!-- Selector de período -->
+          <div style="display:flex;gap:4px;background:rgba(255,255,255,.06);border-radius:10px;padding:4px;margin-bottom:14px">
+            <button class="periodo-btn active" id="pb-mensual" onclick="selPeriodo('mensual')">Mensual</button>
+            <button class="periodo-btn" id="pb-trimestral" onclick="selPeriodo('trimestral')">Trimestral</button>
+            <button class="periodo-btn" id="pb-semestral" onclick="selPeriodo('semestral')">
+              Semestral
+              <span style="font-size:9px;background:var(--green);color:white;border-radius:4px;padding:1px 4px;margin-left:3px">-1 mes</span>
+            </button>
+            <button class="periodo-btn" id="pb-anual" onclick="selPeriodo('anual')">
+              Anual
+              <span style="font-size:9px;background:var(--green);color:white;border-radius:4px;padding:1px 4px;margin-left:3px">-2 meses</span>
+            </button>
+          </div>
+
+          <!-- Cards de planes -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center">
-              <div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--white)">$12<span style="font-size:11px;font-weight:400;color:var(--s400)">/mes</span></div>
-              <div style="font-size:12px;font-weight:600;color:var(--amber);margin:4px 0">Básico</div>
-              <div style="font-size:11px;color:var(--s400)">10 proyectos · 3 usuarios</div>
-              <button onclick="contactarUpgrade('basico')" style="width:100%;margin-top:8px;padding:7px;border-radius:8px;border:1px solid var(--amber);background:transparent;color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--fb)">Contratar</button>
+            <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:14px;text-align:center">
+              <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:6px">Básico</div>
+              <div style="font-family:var(--fd);font-size:26px;font-weight:800;color:var(--white)" id="precio-basico">$12</div>
+              <div style="font-size:11px;color:var(--s400)" id="periodo-basico">/mes</div>
+              <div style="font-size:11px;color:var(--s400);margin-top:6px;line-height:1.4">10 proyectos · 3 usuarios</div>
+              <div id="ahorro-basico" style="font-size:11px;color:var(--green);margin-top:4px;font-weight:600;min-height:16px"></div>
+              <button onclick="contactarUpgrade('basico')" style="width:100%;margin-top:10px;padding:8px;border-radius:8px;border:1px solid var(--amber);background:transparent;color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--fb)">Contratar</button>
             </div>
-            <div style="background:rgba(245,158,11,.12);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(245,158,11,.3)">
-              <div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--white)">$20<span style="font-size:11px;font-weight:400;color:var(--s400)">/mes</span></div>
-              <div style="font-size:12px;font-weight:600;color:var(--amber);margin:4px 0">Premium ⭐</div>
-              <div style="font-size:11px;color:var(--s400)">Ilimitado · 10 usuarios</div>
-              <button onclick="contactarUpgrade('premium')" style="width:100%;margin-top:8px;padding:7px;border-radius:8px;border:none;background:var(--amber);color:var(--dark);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--fb)">Contratar</button>
+            <div style="background:rgba(245,158,11,.12);border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(245,158,11,.3)">
+              <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:6px">Premium ⭐</div>
+              <div style="font-family:var(--fd);font-size:26px;font-weight:800;color:var(--white)" id="precio-premium">$20</div>
+              <div style="font-size:11px;color:var(--s400)" id="periodo-premium">/mes</div>
+              <div style="font-size:11px;color:var(--s400);margin-top:6px;line-height:1.4">Ilimitado · 10 usuarios</div>
+              <div id="ahorro-premium" style="font-size:11px;color:var(--green);margin-top:4px;font-weight:600;min-height:16px"></div>
+              <button onclick="contactarUpgrade('premium')" style="width:100%;margin-top:10px;padding:8px;border-radius:8px;border:none;background:var(--amber);color:var(--dark);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--fb)">Contratar</button>
             </div>
+          </div>
+
+          <div style="font-size:11px;color:var(--s400);text-align:center;margin-top:12px">
+            Pagos manuales vía WhatsApp · Activa en minutos
           </div>
         </div>
 
         <button class="btn" style="background:var(--dark);color:var(--white);width:100%;margin-top:4px" onclick="handleLogout()">🚪 Cerrar sesión</button>
+      </div>
+
+      <!-- SUPERADMIN PANEL -->
+      <div id="view-superadmin" class="view">
+        <div class="page-header">
+          <div>
+            <div class="page-title">⚡ Panel Superadmin</div>
+            <div class="page-subtitle">Edifika — gestión de empresas registradas</div>
+          </div>
+          <button class="btn btn-sm" style="background:var(--dark);color:var(--white)" onclick="cargarSuperadmin()">↻ Actualizar</button>
+        </div>
+
+        <!-- Métricas globales -->
+        <div class="metrics-grid" id="sa-metrics" style="margin-bottom:20px"></div>
+
+        <!-- Tabla de empresas -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--s100);display:flex;align-items:center;justify-content:space-between">
+            <div class="section-title">Empresas registradas</div>
+            <input type="text" id="sa-search" placeholder="Buscar empresa..." oninput="filtrarEmpresas(this.value)"
+              style="padding:7px 12px;border:1px solid var(--s200);border-radius:8px;font-size:13px;font-family:var(--fb);outline:none;width:200px">
+          </div>
+          <div id="sa-empresas-lista"></div>
+        </div>
       </div>
 
     </div><!-- /app-content -->
@@ -1218,6 +1283,10 @@ async function iniciar() {
     S.empresa = profile.empresas;
     actualizarUI();
     await Promise.all([cargarProyectos(), cargarGastos(), cargarVentas(), cargarTareas()]);
+    // Aplicar permisos DESPUÉS de cargar datos para tener conteos correctos
+    aplicarPermisos();
+    activarSuperadmin();
+    if (puedo('gestionarUsuarios')) cargarUsuariosEmpresa();
     showScreen('main');
     navTo('dashboard');
   } catch (e) { console.error(e); toast('Error al cargar'); }
@@ -1242,10 +1311,7 @@ function actualizarUI() {
   if(sbRol) sbRol.textContent = capFirst(S.profile.rol||'admin');
   const sbEmp = document.getElementById('sb-empresa');
   if(sbEmp) sbEmp.textContent = S.empresa.nombre;
-  // Aplicar permisos según rol
-  aplicarPermisos();
-  // Cargar usuarios si es admin
-  if (puedo('gestionarUsuarios')) cargarUsuariosEmpresa();
+  // Permisos y usuarios se aplican después de cargar datos (ver iniciar())
 }
 
 // ══════════════════════════════════════════════
@@ -2458,6 +2524,7 @@ function navTo(view) {
   const si = document.getElementById(`sb-${view}`);
   if (si) si.classList.add('active');
   if (view === 'dashboard') renderDashboard();
+  if (view === 'superadmin') cargarSuperadmin();
   if (view === 'proyectos') { renderProyectos(S.proyectos); document.getElementById('proyectos-count').textContent = `${S.proyectos.length} proyecto${S.proyectos.length!==1?'s':''}`; }
   if (view === 'gastos') renderGastos(S.gastos);
   if (view === 'ventas') renderVentas();
@@ -2528,9 +2595,14 @@ function aplicarPermisos() {
   document.getElementById('sb-ventas')?.style?.setProperty('display', esContratista ? 'none' : '');
   // Uso de proyectos en perfil
   const limite = PLAN_LIMITES[S.empresa?.plan||'free'] ?? 1;
-  const limiteTexto = limite >= 99999 ? 'ilimitados' : `${S.proyectos.length} de ${limite}`;
+  const usados = S.proyectos.length;
+  const limiteTexto = limite >= 99999 ? `${usados} (ilimitados)` : `${usados} de ${limite} usados`;
   const el = document.getElementById('perfil-proyectos-uso');
   if (el) el.textContent = limiteTexto;
+  // Ocultar card upgrade si plan es premium
+  if (S.empresa?.plan === 'premium') {
+    document.getElementById('card-upgrade')?.style?.setProperty('display','none');
+  }
   // Texto upgrade
   const upgradeEl = document.getElementById('upgrade-texto');
   if (upgradeEl && S.empresa?.plan === 'premium') {
@@ -2604,9 +2676,161 @@ async function cancelarInvitacion(id) {
   await cargarUsuariosEmpresa();
 }
 
+// ══ SUPERADMIN ══
+const SUPERADMIN_EMAIL = 'edifika77@gmail.com';
+let saEmpresas = [];
+
+function esSuperadmin() {
+  return S.user?.email === SUPERADMIN_EMAIL;
+}
+
+function activarSuperadmin() {
+  const item = document.getElementById('sb-superadmin-item');
+  if (item) item.style.display = esSuperadmin() ? 'block' : 'none';
+}
+
+async function cargarSuperadmin() {
+  if (!esSuperadmin()) return;
+
+  // Cargar todas las empresas
+  const { data: empresas, error } = await db.from('empresas').select('*').order('created_at', { ascending: false });
+  if (error) { toast('Error al cargar empresas'); return; }
+  saEmpresas = empresas || [];
+
+  // Cargar conteos por empresa
+  const [{ data: perfiles }, { data: proyectos }] = await Promise.all([
+    db.from('profiles').select('empresa_id, rol'),
+    db.from('proyectos').select('empresa_id, estado')
+  ]);
+
+  // Métricas globales
+  const totalEmpresas = empresas.length;
+  const planCounts = { free: 0, basico: 0, premium: 0 };
+  empresas.forEach(e => { planCounts[e.plan] = (planCounts[e.plan] || 0) + 1; });
+
+  document.getElementById('sa-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total empresas</div><div class="metric-value amber">${totalEmpresas}</div></div>
+    <div class="metric-card"><div class="metric-label">Plan Free</div><div class="metric-value" style="color:var(--s600)">${planCounts.free||0}</div></div>
+    <div class="metric-card"><div class="metric-label">Plan Básico</div><div class="metric-value" style="color:var(--blue)">${planCounts.basico||0}</div></div>
+    <div class="metric-card"><div class="metric-label">Plan Premium</div><div class="metric-value green">${planCounts.premium||0}</div></div>
+  `;
+
+  // Renderizar lista
+  renderEmpresasSA(empresas, perfiles || [], proyectos || []);
+}
+
+function renderEmpresasSA(empresas, perfiles, proyectos) {
+  const lista = document.getElementById('sa-empresas-lista');
+  if (!empresas.length) { lista.innerHTML = '<div class="empty"><p>Sin empresas registradas</p></div>'; return; }
+
+  lista.innerHTML = empresas.map(e => {
+    const users = perfiles.filter(p => p.empresa_id === e.id);
+    const proys = proyectos.filter(p => p.empresa_id === e.id);
+    const activos = proys.filter(p => ['planificacion','construccion'].includes(p.estado)).length;
+    const fechaReg = new Date(e.created_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' });
+    const planClass = { free:'plan-badge-free', basico:'plan-badge-basico', premium:'plan-badge-premium' }[e.plan] || 'plan-badge-free';
+
+    return `<div class="sa-empresa-row" id="sa-row-${e.id}">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--dark2)">${e.nombre}</div>
+        <div style="display:flex;gap:10px;margin-top:3px">
+          <span class="sa-stat">📅 ${fechaReg}</span>
+          <span class="sa-stat">👥 ${users.length} usuario${users.length!==1?'s':''}</span>
+          <span class="sa-stat">🏗️ ${proys.length} proyecto${proys.length!==1?'s':''}${activos?' ('+activos+' activo'+( activos!==1?'s':'')+')'  :''}</span>
+        </div>
+      </div>
+      <span class="badge ${planClass}" style="font-size:11px">${capFirst(e.plan||'free')}</span>
+      <select class="plan-select" onchange="cambiarPlanEmpresa('${e.id}',this.value)" title="Cambiar plan">
+        <option value="free" ${e.plan==='free'?'selected':''}>Free</option>
+        <option value="basico" ${e.plan==='basico'?'selected':''}>Básico</option>
+        <option value="premium" ${e.plan==='premium'?'selected':''}>Premium</option>
+      </select>
+      <button onclick="verDetalleEmpresa('${e.id}')" style="padding:6px 10px;background:var(--s100);border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:var(--fb);color:var(--dark2)" title="Ver detalle">Ver →</button>
+    </div>`;
+  }).join('');
+}
+
+function filtrarEmpresas(q) {
+  const filtered = q ? saEmpresas.filter(e => e.nombre.toLowerCase().includes(q.toLowerCase())) : saEmpresas;
+  const { data: perfiles } = { data: [] };
+  renderEmpresasSA(filtered, [], []);
+  if (q) cargarSuperadmin(); // reload con datos completos
+}
+
+async function cambiarPlanEmpresa(empresaId, nuevoPlan) {
+  const { error } = await db.from('empresas').update({ plan: nuevoPlan }).eq('id', empresaId);
+  if (error) { toast('Error al cambiar plan'); return; }
+  const e = saEmpresas.find(x => x.id === empresaId);
+  if (e) e.plan = nuevoPlan;
+  toast(`Plan cambiado a ${capFirst(nuevoPlan)} ✓`);
+  // Actualizar badge visualmente
+  const row = document.getElementById(`sa-row-${empresaId}`);
+  if (row) {
+    const badge = row.querySelector('.badge');
+    const planClass = { free:'plan-badge-free', basico:'plan-badge-basico', premium:'plan-badge-premium' }[nuevoPlan];
+    if (badge) { badge.className = `badge ${planClass}`; badge.textContent = capFirst(nuevoPlan); }
+  }
+}
+
+async function verDetalleEmpresa(empresaId) {
+  const e = saEmpresas.find(x => x.id === empresaId);
+  if (!e) return;
+  const { data: usuarios } = await db.from('profiles').select('nombre,rol,created_at').eq('empresa_id', empresaId);
+  const rolIcon = { admin:'Adm', operador:'Ope', contratista:'Con' };
+  const userLines = (usuarios||[]).map(function(u) { return (rolIcon[u.rol]||'') + ' ' + (u.nombre||'Sin nombre') + ' (' + u.rol + ')'; });
+  const planLabel = capFirst(e.plan||'free');
+  const msg = e.nombre + ' - Plan: ' + planLabel + '\n\nUsuarios:\n' + (userLines.length ? userLines.join('\n') : 'Sin usuarios');
+  alert(msg);
+}
+
+let periodoActual = 'mensual';
+
+const PRECIOS = {
+  basico:  { mensual:12, trimestral:36, semestral:60, anual:120 },
+  premium: { mensual:20, trimestral:60, semestral:100, anual:200 }
+};
+
+const PERIODOS_LABEL = {
+  mensual: { label:'/mes', meses:1 },
+  trimestral: { label:'/trimestre (3 meses)', meses:3 },
+  semestral: { label:'/semestre (6 meses)', meses:6 },
+  anual: { label:'/año (12 meses)', meses:12 }
+};
+
+function selPeriodo(periodo) {
+  periodoActual = periodo;
+  document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pb-' + periodo)?.classList.add('active');
+
+  // Actualizar precios
+  ['basico','premium'].forEach(plan => {
+    const total = PRECIOS[plan][periodo];
+    const meses = PERIODOS_LABEL[periodo].meses;
+    const porMes = (total / meses).toFixed(0);
+    const pLabel = PERIODOS_LABEL[periodo].label;
+
+    document.getElementById('precio-' + plan).textContent = '$' + total;
+    document.getElementById('periodo-' + plan).textContent = pLabel;
+
+    const ahorroEl = document.getElementById('ahorro-' + plan);
+    if (periodo === 'semestral') {
+      const precio1 = PRECIOS[plan].mensual;
+      ahorroEl.textContent = 'Ahorras $' + precio1 + ' (1 mes gratis)';
+    } else if (periodo === 'anual') {
+      const precio1 = PRECIOS[plan].mensual;
+      ahorroEl.textContent = 'Ahorras $' + (precio1 * 2) + ' (2 meses gratis)';
+    } else {
+      ahorroEl.textContent = meses > 1 ? ('$' + porMes + '/mes') : '';
+    }
+  });
+}
+
 function contactarUpgrade(plan) {
-  const msg = encodeURIComponent(`Hola, me interesa el plan ${plan === 'premium' ? 'Premium ($20/mes)' : 'Básico ($12/mes)'} de Edifika. Mi empresa es: ${S.empresa?.nombre}`);
-  window.open(`https://wa.me/593992774892?text=${msg}`, '_blank');
+  const total = PRECIOS[plan][periodoActual];
+  const pLabel = PERIODOS_LABEL[periodoActual].label;
+  const planLabel = plan === 'premium' ? 'Premium' : 'Básico';
+  const msg = 'Hola, me interesa el plan ' + planLabel + ' de Edifika - $' + total + pLabel + '. Mi empresa es: ' + (S.empresa?.nombre || '');
+  window.open('https://wa.me/593992774892?text=' + encodeURIComponent(msg), '_blank');
 }
 
 // ══ FACTURA ══
