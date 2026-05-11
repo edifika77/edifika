@@ -278,10 +278,16 @@
     .sb-item.active{background:rgba(245,158,11,0.15);color:var(--amber)}
     .sb-item.active svg{stroke:var(--amber)}
     .sb-item:not(.active) svg{stroke:var(--s400)}
-    .unidad-row{display:grid;grid-template-columns:1fr 80px 1fr 32px;gap:6px;align-items:center;margin-bottom:8px}
-    .unidad-row input,.unidad-row select{padding:8px 10px;border:1px solid var(--s200);border-radius:8px;font-size:13px;font-family:var(--fb);outline:none;width:100%}
-    .unidad-row input:focus,.unidad-row select:focus{border-color:var(--amber)}
-    .unidad-row .del-btn{width:30px;height:30px;border:none;border-radius:8px;background:var(--s100);color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .ucheck-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--s200);border-radius:10px;background:var(--white);transition:border .15s}
+    .ucheck-row.active{border-color:var(--amber);background:var(--amber-l)}
+    .ucheck-cb{width:20px;height:20px;border-radius:5px;border:2px solid var(--s200);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;transition:all .15s;background:var(--white)}
+    .ucheck-cb.checked{background:var(--amber);border-color:var(--amber);color:var(--dark)}
+    .ucheck-label{font-size:13px;font-weight:500;color:var(--dark2);flex:1;cursor:pointer}
+    .ucheck-fields{display:none;align-items:center;gap:6px}
+    .ucheck-fields.show{display:flex}
+    .ucheck-fields input{width:80px;padding:6px 8px;border:1px solid var(--s200);border-radius:7px;font-size:12px;font-family:var(--fb);outline:none;text-align:center}
+    .ucheck-fields input:focus{border-color:var(--amber)}
+    .ucheck-fields label{font-size:10px;color:var(--s400);white-space:nowrap}
     /* ── UNIDADES ── */
     .unidades-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:4px}
     .unidad-card{border:1.5px solid var(--s200);border-radius:12px;padding:12px;cursor:pointer;transition:all .15s;background:var(--white);-webkit-tap-highlight-color:transparent}
@@ -646,11 +652,8 @@
     </div>
     <div style="margin-bottom:14px">
       <div class="form-label-light" style="margin-bottom:8px;font-weight:600">Unidades vendibles</div>
-      <div id="mp-unidades-rows"></div>
-      <button type="button" onclick="agregarFilaUnidad()" style="width:100%;padding:9px;border:1.5px dashed var(--s200);border-radius:10px;background:transparent;color:var(--amber-d);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fb)">
-        + Agregar tipo de unidad
-      </button>
-      <div style="font-size:11px;color:var(--s400);margin-top:6px">El sistema creará automáticamente cada unidad (Casa 1, Casa 2...). Puedes agregar más desde el proyecto.</div>
+      <div id="mp-unidades-checkboxes" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="mp-unidades-nota" style="font-size:11px;color:var(--s400);margin-top:8px">Marca los tipos de unidad que tiene este proyecto e ingresa la cantidad y precio base de cada uno. El sistema creará automáticamente Casa 1, Casa 2, etc.</div>
     </div>
     <div id="mp-error" class="error-msg"></div>
     <div style="display:flex;gap:8px">
@@ -1646,15 +1649,15 @@ function editarProyectoActual() {
   document.getElementById('mp-nombre').value = p.nombre;
   document.getElementById('mp-tipo').value = p.tipo || 'conjunto';
   document.getElementById('mp-ubicacion').value = p.ubicacion || '';
-  // Reset unit rows - show note about existing units
-  const rowContainer = document.getElementById('mp-unidades-rows');
-  rowContainer.innerHTML = '';
+  // Render checkboxes for current tipo
+  const tipoSel2 = document.getElementById('mp-tipo');
+  tipoSel2.onchange = () => renderUnidadCheckboxes(tipoSel2.value);
   const existingCount = S.currentUnidades ? S.currentUnidades.length : 0;
+  const existingTipos = S.currentUnidades ? [...new Set(S.currentUnidades.map(u=>u.tipo))] : [];
+  renderUnidadCheckboxes(p.tipo || 'conjunto', existingTipos);
   if (existingCount > 0) {
-    const note = document.createElement('div');
-    note.style = 'background:var(--amber-l);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--amber-d);margin-bottom:8px;font-weight:500';
-    note.textContent = `✓ Este proyecto ya tiene ${existingCount} unidad${existingCount!==1?'es':''} definida${existingCount!==1?'s':''}. Agrega filas solo si quieres crear unidades adicionales.`;
-    rowContainer.appendChild(note);
+    const nota = document.getElementById('mp-unidades-nota');
+    if (nota) nota.textContent = `Este proyecto ya tiene ${existingCount} unidad${existingCount!==1?'es':''} definida${existingCount!==1?'s':''}. Al marcar nuevos tipos y guardar, se agregarán más unidades sin borrar las existentes.`;
   }
   document.getElementById('mp-estado').value = p.estado;
   document.getElementById('mp-presupuesto').value = p.presupuesto || '';
@@ -1671,40 +1674,116 @@ async function eliminarProyectoActual() {
   navTo('proyectos');
 }
 
-function agregarFilaUnidad(tipo='casa', cantidad=1, precio=0) {
-  const container = document.getElementById('mp-unidades-rows');
-  const idx = container.children.length;
-  const row = document.createElement('div');
-  row.className = 'unidad-row';
-  row.dataset.rowIdx = idx;
-  row.innerHTML = `
-    <select class="ur-tipo" onchange="actualizarPlaceholder(this)">
-      <option value="casa" ${tipo==='casa'?'selected':''}>🏠 Casa</option>
-      <option value="departamento" ${tipo==='departamento'?'selected':''}>🏢 Departamento</option>
-      <option value="local_comercial" ${tipo==='local_comercial'?'selected':''}>🏪 Local comercial</option>
-      <option value="oficina" ${tipo==='oficina'?'selected':''}>💼 Oficina</option>
-      <option value="bodega" ${tipo==='bodega'?'selected':''}>📦 Bodega</option>
-      <option value="parqueadero" ${tipo==='parqueadero'?'selected':''}>🚗 Parqueadero</option>
-      <option value="otro" ${tipo==='otro'?'selected':''}>📐 Otro</option>
-    </select>
-    <input type="number" class="ur-cant" value="${cantidad}" min="1" max="500" placeholder="N°" title="Cantidad">
-    <input type="number" class="ur-precio" value="${precio||''}" placeholder="Precio base $" title="Precio base por unidad">
-    <button class="del-btn" onclick="this.closest('.unidad-row').remove()" title="Eliminar fila">×</button>
-  `;
-  container.appendChild(row);
+// Mapa de unidades por tipo de proyecto
+const UNIDADES_POR_TIPO = {
+  conjunto: [
+    { id:'casa', icon:'🏠', label:'Casa', hint:'Parqueadero incluido', default:true },
+    { id:'bodega', icon:'📦', label:'Bodega independiente', hint:'Bodega vendible por separado' },
+    { id:'local_comercial', icon:'🏪', label:'Local comercial', hint:'Área comercial en entrada del conjunto' }
+  ],
+  casa: [
+    { id:'casa', icon:'🏠', label:'Casa', hint:'Unidad única', default:true, unico:true }
+  ],
+  edificio: [
+    { id:'suite', icon:'🛋️', label:'Suite / Estudio', hint:'1 ambiente' },
+    { id:'departamento', icon:'🏢', label:'Departamento', hint:'1-3 dormitorios' },
+    { id:'duplex', icon:'🏠', label:'Dúplex', hint:'2 plantas' },
+    { id:'penthouse', icon:'⭐', label:'Penthouse', hint:'Piso superior premium' },
+    { id:'local_comercial', icon:'🏪', label:'Local comercial', hint:'Planta baja' },
+    { id:'oficina', icon:'💼', label:'Oficina', hint:'' },
+    { id:'parqueadero', icon:'🚗', label:'Parqueadero', hint:'Vendido independiente' },
+    { id:'bodega', icon:'📦', label:'Bodega', hint:'Subterránea, vendida independiente' }
+  ],
+  comercial: [
+    { id:'local_comercial', icon:'🏪', label:'Local comercial', hint:'', default:true },
+    { id:'oficina', icon:'💼', label:'Oficina', hint:'' },
+    { id:'bodega', icon:'📦', label:'Bodega comercial', hint:'' }
+  ],
+  mixto: [
+    { id:'casa', icon:'🏠', label:'Casa', hint:'' },
+    { id:'departamento', icon:'🏢', label:'Departamento', hint:'' },
+    { id:'local_comercial', icon:'🏪', label:'Local comercial', hint:'' },
+    { id:'oficina', icon:'💼', label:'Oficina', hint:'' },
+    { id:'parqueadero', icon:'🚗', label:'Parqueadero', hint:'' },
+    { id:'bodega', icon:'📦', label:'Bodega', hint:'' }
+  ],
+  otro: [
+    { id:'casa', icon:'🏠', label:'Casa', hint:'' },
+    { id:'departamento', icon:'🏢', label:'Departamento', hint:'' },
+    { id:'local_comercial', icon:'🏪', label:'Local comercial', hint:'' },
+    { id:'oficina', icon:'💼', label:'Oficina', hint:'' },
+    { id:'parqueadero', icon:'🚗', label:'Parqueadero', hint:'' },
+    { id:'bodega', icon:'📦', label:'Bodega', hint:'' }
+  ]
+};
+
+function renderUnidadCheckboxes(tipo, existing=[]) {
+  const container = document.getElementById('mp-unidades-checkboxes');
+  if (!container) return;
+  const opciones = UNIDADES_POR_TIPO[tipo] || UNIDADES_POR_TIPO.otro;
+  
+  // Si es casa individual, mostrar solo nota
+  if (tipo === 'casa') {
+    container.innerHTML = `<div style="background:var(--amber-l);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--amber-d);font-weight:500">🏠 Casa individual — se creará 1 unidad automáticamente al guardar.</div>`;
+    return;
+  }
+
+  container.innerHTML = opciones.map(op => {
+    const isChecked = op.default || existing.includes(op.id);
+    return `
+    <div class="ucheck-row ${isChecked?'active':''}" id="ucrow-${op.id}">
+      <div class="ucheck-cb ${isChecked?'checked':''}" onclick="toggleUcheck('${op.id}',${op.unico||false})" id="uccb-${op.id}">${isChecked?'✓':''}</div>
+      <div class="ucheck-label" onclick="toggleUcheck('${op.id}',${op.unico||false})">
+        <span>${op.icon} ${op.label}</span>
+        ${op.hint?`<span style="font-size:10px;color:var(--s400);display:block">${op.hint}</span>`:''}
+      </div>
+      <div class="ucheck-fields ${isChecked?'show':''}" id="ucfields-${op.id}">
+        <div style="text-align:center">
+          <label style="font-size:10px;color:var(--s400);display:block">Cantidad</label>
+          <input type="number" id="ucant-${op.id}" value="${isChecked?1:''}" min="1" max="500" placeholder="0">
+        </div>
+        <div style="text-align:center">
+          <label style="font-size:10px;color:var(--s400);display:block">Precio $</label>
+          <input type="number" id="ucprecio-${op.id}" placeholder="0.00">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleUcheck(id, unico=false) {
+  const cb = document.getElementById('uccb-'+id);
+  const fields = document.getElementById('ucfields-'+id);
+  const row = document.getElementById('ucrow-'+id);
+  if (!cb) return;
+  const isChecked = cb.classList.contains('checked');
+  cb.classList.toggle('checked', !isChecked);
+  cb.innerHTML = !isChecked ? '✓' : '';
+  fields.classList.toggle('show', !isChecked);
+  row.classList.toggle('active', !isChecked);
+  if (!isChecked) {
+    const cantInput = document.getElementById('ucant-'+id);
+    if (cantInput && !cantInput.value) cantInput.value = 1;
+  }
 }
 
 function leerFilasUnidades() {
-  const rows = document.querySelectorAll('.unidad-row');
-  return Array.from(rows).map(r => ({
-    tipo: r.querySelector('.ur-tipo').value,
-    cantidad: parseInt(r.querySelector('.ur-cant').value) || 1,
-    precio: parseFloat(r.querySelector('.ur-precio').value) || 0
-  })).filter(r => r.cantidad > 0);
+  const tipo = document.getElementById('mp-tipo')?.value || 'conjunto';
+  if (tipo === 'casa') return [{ tipo:'casa', cantidad:1, precio:0 }];
+  
+  const opciones = UNIDADES_POR_TIPO[tipo] || UNIDADES_POR_TIPO.otro;
+  return opciones
+    .filter(op => document.getElementById('uccb-'+op.id)?.classList.contains('checked'))
+    .map(op => ({
+      tipo: op.id,
+      cantidad: parseInt(document.getElementById('ucant-'+op.id)?.value)||1,
+      precio: parseFloat(document.getElementById('ucprecio-'+op.id)?.value)||0
+    }))
+    .filter(r => r.cantidad > 0);
 }
 
 async function crearUnidadesDesdeFilas(proyectoId, filas) {
-  const tipoLabels = {casa:'Casa',departamento:'Depto',local_comercial:'Local',oficina:'Ofic.',bodega:'Bodega',parqueadero:'Park.',otro:'Unidad'};
+  const tipoLabels = {casa:'Casa',departamento:'Depto',duplex:'Dúplex',suite:'Suite',penthouse:'PH',local_comercial:'Local',oficina:'Ofic.',bodega:'Bodega',parqueadero:'Park.',otro:'Unidad'};
   const counters = {};
   const inserts = [];
   for (const fila of filas) {
@@ -1980,9 +2059,11 @@ function openModal(id) {
     ['mp-nombre','mp-ubicacion','mp-presupuesto','mp-inicio','mp-entrega'].forEach(i => document.getElementById(i).value = '');
     document.getElementById('mp-estado').value = 'planificacion';
     document.getElementById('mp-tipo').value = 'conjunto';
-    // Reset units rows - start with 1 empty row for new projects
-    document.getElementById('mp-unidades-rows').innerHTML = '';
-    agregarFilaUnidad('casa', 1, 0);
+    // Render checkboxes for default tipo
+    renderUnidadCheckboxes('conjunto');
+    // Listen for tipo change
+    const tipoSel = document.getElementById('mp-tipo');
+    tipoSel.onchange = () => renderUnidadCheckboxes(tipoSel.value);
   }
 }
 
