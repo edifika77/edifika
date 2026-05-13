@@ -2271,21 +2271,30 @@ async function guardarProyecto() {
   
   const data = { nombre, tipo: v('mp-tipo') || 'conjunto', ubicacion: v('mp-ubicacion') || null, estado: v('mp-estado'), presupuesto: parseFloat(v('mp-presupuesto')) || 0, fecha_inicio: v('mp-inicio') || null, fecha_entrega: v('mp-entrega') || null, empresa_id: S.empresa.id };
   setLoading('btn-mp', true);
+  console.log('[guardarProyecto] empresa:', S.empresa?.id, 'user:', S.user?.id, 'data:', JSON.stringify(data));
   try {
     if (editId) {
-      await withTimeout(db.from('proyectos').update(data).eq('id', editId));
+      const r1 = await withTimeout(db.from('proyectos').update(data).eq('id', editId));
+      console.log('[guardarProyecto] update result:', r1);
+      if (r1?.error) throw new Error(r1.error.message);
       const filas = leerFilasUnidades();
       if (filas.length > 0) { await crearUnidadesDesdeFilas(editId, filas); }
       toast('Proyecto actualizado ✓');
     } else {
-      const { data: nuevo } = await withTimeout(db.from('proyectos').insert(data).select().single());
+      const r2 = await withTimeout(db.from('proyectos').insert(data).select().single());
+      console.log('[guardarProyecto] insert result:', r2);
+      if (r2?.error) throw new Error(r2.error.message);
+      const nuevo = r2?.data;
       const filas = leerFilasUnidades();
       if (filas.length > 0 && nuevo) {
         const n = await crearUnidadesDesdeFilas(nuevo.id, filas);
         toast(`Proyecto creado con ${n} unidades ✓`);
       } else { toast('Proyecto creado ✓'); }
     }
-  } catch(e) { showErr('mp-error', 'Error al guardar'); console.error(e); }
+  } catch(e) {
+    console.error('[guardarProyecto] ERROR:', e);
+    showErr('mp-error', e.message || 'Error al guardar. Revisa tu conexión.');
+  }
   setLoading('btn-mp', false);
   closeModal('modal-proyecto');
   await cargarProyectos();
