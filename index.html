@@ -1402,8 +1402,8 @@ async function handleCreateEmpresa() {
 
     // 2. Crear empresa
     const telefono = v('empresa-telefono') || null;
-    const { data: emp, error: e1 } = await db
-      .from('empresas').insert({ nombre, plan:'free', telefono }).select().single();
+    const { data: emp, error: e1 } = await withTimeout(db
+      .from('empresas').insert({ nombre, plan:'free', telefono }).select().single());
     console.log('[onboard] emp:', emp, 'e1:', e1);
     if (e1) throw new Error('Error al crear empresa: ' + e1.message);
 
@@ -1763,7 +1763,7 @@ async function guardarUnidad() {
   if (!identificador) return showErr('nu-error', 'El identificador es obligatorio');
   setLoading('btn-nu', true);
   try {
-    const { error } = await db.from('unidades').insert({
+    const { error } = await withTimeout(db.from('unidades').insert({
       proyecto_id: S.currentProyecto.id,
       empresa_id: S.empresa.id,
       tipo: v('nu-tipo'),
@@ -1773,7 +1773,7 @@ async function guardarUnidad() {
       precio_base: parseFloat(v('nu-precio')) || 0,
       notas: v('nu-notas') || null,
       estado: 'disponible'
-    });
+    }));
     if (error) throw error;
     closeModal('modal-nueva-unidad');
     ['nu-id','nu-area','nu-piso','nu-precio','nu-notas'].forEach(id => document.getElementById(id).value = '');
@@ -1796,7 +1796,7 @@ async function guardarVentaUnidad() {
   setLoading('btn-mvu', true);
   try {
     const estadoVenta = v('mvu-estado');
-    const { error: e1 } = await db.from('ventas').insert({
+    const { error: e1 } = await withTimeout(db.from('ventas').insert({
       proyecto_id: S.currentProyecto.id,
       empresa_id: S.empresa.id,
       unidad_id: unidadId,
@@ -1807,7 +1807,7 @@ async function guardarVentaUnidad() {
       forma_pago: v('mvu-forma'),
       fecha_cierre: v('mvu-fecha') || null,
       estado: estadoVenta
-    });
+    }));
     if (e1) throw e1;
 
     // Actualizar estado de la unidad según estado de la venta
@@ -1975,7 +1975,7 @@ async function guardarTarea() {
   const faseId = document.getElementById('mt-fase-id').value;
   setLoading('btn-mt', true);
   try {
-    const { error } = await db.from('tareas').insert({
+    const { error } = await withTimeout(db.from('tareas').insert({
       fase_id: faseId,
       proyecto_id: S.currentProyecto.id,
       empresa_id: S.empresa.id,
@@ -1984,7 +1984,7 @@ async function guardarTarea() {
       costo_estimado: parseFloat(v('mt-estimado')) || 0,
       costo_real: parseFloat(v('mt-real')) || 0,
       estado: v('mt-estado')
-    });
+    }));
     if (error) { toast('Error: ' + error.message); console.error(error); }
     else { closeModal('modal-tarea'); toast('Tarea agregada ✓'); await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
   } catch(e) { console.error(e); toast('Error al guardar'); }
@@ -2273,12 +2273,12 @@ async function guardarProyecto() {
   setLoading('btn-mp', true);
   try {
     if (editId) {
-      await db.from('proyectos').update(data).eq('id', editId);
+      await withTimeout(db.from('proyectos').update(data).eq('id', editId));
       const filas = leerFilasUnidades();
       if (filas.length > 0) { await crearUnidadesDesdeFilas(editId, filas); }
       toast('Proyecto actualizado ✓');
     } else {
-      const { data: nuevo } = await db.from('proyectos').insert(data).select().single();
+      const { data: nuevo } = await withTimeout(db.from('proyectos').insert(data).select().single());
       const filas = leerFilasUnidades();
       if (filas.length > 0 && nuevo) {
         const n = await crearUnidadesDesdeFilas(nuevo.id, filas);
@@ -2419,7 +2419,7 @@ async function guardarGasto() {
       iva_pct: parseFloat(v('mg-iva-pct')) || 15,
       total_factura: parseFloat(v('mg-total-factura')) || null
     };
-    const { data: gasto, error } = await db.from('gastos').insert(gastoData).select().single();
+    const { data: gasto, error } = await withTimeout(db.from('gastos').insert(gastoData).select().single());
     if (error) throw error;
     // Subir archivo si hay
     if (archivoSeleccionado && gasto) {
@@ -2650,6 +2650,14 @@ document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('cli
 // HELPERS
 // ══════════════════════════════════════════════
 const v = id => document.getElementById(id).value.trim();
+
+// Timeout para queries Supabase que se cuelgan
+function withTimeout(promise, ms=12000, msg='Tiempo de espera agotado. Verifica tu conexión e intenta de nuevo.') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms))
+  ]);
+}
 
 // ══ ROLES Y PERMISOS ══
 const ROL_PERMISOS = {
