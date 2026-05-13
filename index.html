@@ -24,8 +24,11 @@
       --fd:'Outfit',sans-serif;--fb:'DM Sans',sans-serif;
     }
     body{font-family:var(--fb);background:var(--s50);color:var(--dark2);min-height:100vh;overflow-x:hidden}
-    .screen{display:none;min-height:100vh}
-    .screen.active{display:flex}
+    .screen{display:none !important;min-height:100vh}
+    .screen.active{display:flex !important}
+    #screen-auth.active,#screen-onboarding.active{
+      position:fixed;inset:0;z-index:9999;overflow-y:auto;
+    }
 
     /* ── AUTH ── */
     #screen-auth{
@@ -2604,8 +2607,20 @@ function showView(view) {
 }
 
 function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(`screen-${name}`).classList.add('active');
+  // Ocultar todas las pantallas explícitamente
+  ['auth','onboarding','main'].forEach(n => {
+    const el = document.getElementById('screen-' + n);
+    if (el) {
+      el.classList.remove('active');
+      el.style.display = 'none';
+    }
+  });
+  // Mostrar solo la pantalla objetivo
+  const target = document.getElementById('screen-' + name);
+  if (target) {
+    target.style.display = '';
+    target.classList.add('active');
+  }
 }
 
 // ══════════════════════════════════════════════
