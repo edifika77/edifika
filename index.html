@@ -561,7 +561,13 @@
 
         <div style="display:flex;gap:8px;margin-top:4px;margin-bottom:8px">
           <button class="btn btn-secondary" style="flex:1" onclick="editarProyectoActual()">✏️ Editar</button>
-          <button class="btn btn-danger" style="flex:1" onclick="eliminarProyectoActual()">🗑️ Eliminar</button>
+          <button class="btn btn-danger" onclick="eliminarProyectoActual()" style="padding:12px 16px">🗑️</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <button class="btn" style="background:#1e40af;color:white" onclick="reporteFicha()">📋 Ficha del proyecto</button>
+          <button class="btn" style="background:#065f46;color:white" onclick="reporteFinanciero()">💰 Estado financiero</button>
+          <button class="btn" style="background:#92400e;color:white" onclick="reporteGastos()">🧾 Libro de gastos</button>
+          <button class="btn" style="background:#4c1d95;color:white" onclick="reporteVentas()">🏠 Reporte de ventas</button>
         </div>
       </div>
 
@@ -1763,7 +1769,7 @@ async function guardarUnidad() {
   if (!identificador) return showErr('nu-error', 'El identificador es obligatorio');
   setLoading('btn-nu', true);
   try {
-    const { error } = await withTimeout(db.from('unidades').insert({
+    const { error } = await dbWrite(db.from('unidades').insert({
       proyecto_id: S.currentProyecto.id,
       empresa_id: S.empresa.id,
       tipo: v('nu-tipo'),
@@ -1796,7 +1802,7 @@ async function guardarVentaUnidad() {
   setLoading('btn-mvu', true);
   try {
     const estadoVenta = v('mvu-estado');
-    const { error: e1 } = await withTimeout(db.from('ventas').insert({
+    const { error: e1 } = await dbWrite(db.from('ventas').insert({
       proyecto_id: S.currentProyecto.id,
       empresa_id: S.empresa.id,
       unidad_id: unidadId,
@@ -1975,7 +1981,7 @@ async function guardarTarea() {
   const faseId = document.getElementById('mt-fase-id').value;
   setLoading('btn-mt', true);
   try {
-    const { error } = await withTimeout(db.from('tareas').insert({
+    const { error } = await dbWrite(db.from('tareas').insert({
       fase_id: faseId,
       proyecto_id: S.currentProyecto.id,
       empresa_id: S.empresa.id,
@@ -2274,14 +2280,14 @@ async function guardarProyecto() {
   console.log('[guardarProyecto] empresa:', S.empresa?.id, 'user:', S.user?.id, 'data:', JSON.stringify(data));
   try {
     if (editId) {
-      const r1 = await withTimeout(db.from('proyectos').update(data).eq('id', editId));
+      const r1 = await dbWrite(db.from('proyectos').update(data).eq('id', editId));
       console.log('[guardarProyecto] update result:', r1);
       if (r1?.error) throw new Error(r1.error.message);
       const filas = leerFilasUnidades();
       if (filas.length > 0) { await crearUnidadesDesdeFilas(editId, filas); }
       toast('Proyecto actualizado ✓');
     } else {
-      const r2 = await withTimeout(db.from('proyectos').insert(data).select().single());
+      const r2 = await dbWrite(db.from('proyectos').insert(data).select().single());
       console.log('[guardarProyecto] insert result:', r2);
       if (r2?.error) throw new Error(r2.error.message);
       const nuevo = r2?.data;
@@ -2428,7 +2434,7 @@ async function guardarGasto() {
       iva_pct: parseFloat(v('mg-iva-pct')) || 15,
       total_factura: parseFloat(v('mg-total-factura')) || null
     };
-    const { data: gasto, error } = await withTimeout(db.from('gastos').insert(gastoData).select().single());
+    const { data: gasto, error } = await dbWrite(db.from('gastos').insert(gastoData).select().single());
     if (error) throw error;
     // Subir archivo si hay
     if (archivoSeleccionado && gasto) {
@@ -2661,11 +2667,23 @@ document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('cli
 const v = id => document.getElementById(id).value.trim();
 
 // Timeout para queries Supabase que se cuelgan
-function withTimeout(promise, ms=12000, msg='Tiempo de espera agotado. Verifica tu conexión e intenta de nuevo.') {
+function withTimeout(promise, ms=15000, msg='Error de conexión. Verifica tu internet e intenta de nuevo.') {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms))
   ]);
+}
+
+async function dbWrite(queryBuilder) {
+  // Refrescar sesión antes de cualquier escritura
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) {
+      // Sin sesión - intentar refrescar
+      await db.auth.refreshSession();
+    }
+  } catch(e) { console.warn('Session refresh failed:', e); }
+  return withTimeout(queryBuilder);
 }
 
 // ══ ROLES Y PERMISOS ══
@@ -3066,6 +3084,449 @@ function toggleDropdown(close = false) {
 }
 
 document.addEventListener('click', e => { if (!e.target.closest('.dropdown')) document.getElementById('user-dropdown')?.classList.remove('show'); });
+
+// ══════════════════════════════════════════════
+// REPORTES PDF
+// ══════════════════════════════════════════════
+
+function pdfHeader(doc, titulo, subtitulo='') {
+  const p = S.currentProyecto;
+  const emp = S.empresa;
+  // Fondo header
+  doc.setFillColor(28, 25, 23);
+  doc.rect(0, 0, 210, 32, 'F');
+  // Logo placeholder
+  doc.setFillColor(245, 158, 11);
+  doc.roundedRect(12, 8, 16, 16, 2, 2, 'F');
+  doc.setTextColor(28, 25, 23);
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.text('E', 20, 18.5, {align:'center'});
+  // Empresa y titulo
+  doc.setTextColor(245, 158, 11);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('Edifika', 33, 13);
+  doc.setTextColor(168, 162, 158);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(emp?.nombre || '', 33, 19);
+  // Titulo reporte
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text(titulo, 210-12, 13, {align:'right'});
+  if (subtitulo) {
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(168,162,158);
+    doc.text(subtitulo, 210-12, 19, {align:'right'});
+  }
+  // Proyecto
+  doc.setFillColor(245,158,11);
+  doc.rect(0, 32, 210, 0.5, 'F');
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.setTextColor(40,40,40);
+  doc.text(p?.nombre || '', 12, 40);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8);
+  doc.setTextColor(100,100,100);
+  doc.text([
+    p?.ubicacion || '',
+    'Generado: ' + new Date().toLocaleDateString('es-EC',{day:'2-digit',month:'long',year:'numeric'})
+  ].filter(Boolean).join('  |  '), 12, 46);
+  return 52;
+}
+
+function pdfFooter(doc) {
+  const pages = doc.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFillColor(245,245,244);
+    doc.rect(0, 285, 210, 12, 'F');
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.setTextColor(120,120,120);
+    doc.text('Edifika — Sistema de gestión de proyectos de construcción  |  edifika-delta.vercel.app', 12, 292);
+    doc.text(`Pág. ${i} / ${pages}`, 210-12, 292, {align:'right'});
+  }
+}
+
+function estadoColor(estado) {
+  const m = {
+    completada:[5,150,105], en_curso:[217,119,6], pendiente:[160,160,160],
+    planificacion:[37,99,235], construccion:[217,119,6], terminado:[5,150,105], vendido:[100,100,100],
+    disponible:[37,99,235], reservada:[217,119,6], vendida:[5,150,105], negociando:[217,119,6], cerrada:[5,150,105], escriturada:[37,99,235]
+  };
+  return m[estado] || [100,100,100];
+}
+
+// ── REPORTE 1: FICHA DEL PROYECTO ──
+function reporteFicha() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const p = S.currentProyecto;
+  const fases = S.currentFases;
+  const tareas = S.currentTareas;
+  const tipoLabels = {conjunto:'Conjunto habitacional',casa:'Casa individual',edificio:'Edificio',comercial:'Proyecto comercial',mixto:'Proyecto mixto',otro:'Otro'};
+
+  let y = pdfHeader(doc, 'FICHA DEL PROYECTO');
+
+  // Info general
+  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
+  doc.text('INFORMACIÓN GENERAL', 12, y+2);
+  y += 6;
+  const infoData = [
+    ['Tipo de obra', tipoLabels[p.tipo] || p.tipo || '—'],
+    ['Estado', p.estado?.toUpperCase() || '—'],
+    ['Fecha inicio', p.fecha_inicio ? new Date(p.fecha_inicio+'T00:00:00').toLocaleDateString('es-EC') : '—'],
+    ['Fecha entrega', p.fecha_entrega ? new Date(p.fecha_entrega+'T00:00:00').toLocaleDateString('es-EC') : '—'],
+    ['Presupuesto estimado', p.presupuesto ? '$' + (+p.presupuesto).toLocaleString('es-EC',{minimumFractionDigits:2}) : '—'],
+  ];
+  doc.autoTable({
+    startY: y, margin:{left:12,right:12},
+    head: [], body: infoData,
+    styles:{fontSize:9, cellPadding:3},
+    columnStyles:{ 0:{fontStyle:'bold',cellWidth:60,fillColor:[245,245,244]}, 1:{cellWidth:'auto'} },
+    theme:'plain', tableLineColor:[230,229,228], tableLineWidth:0.3
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Resumen financiero
+  const totalEst = tareas.reduce((a,b)=>a+(+b.costo_estimado||0),0);
+  const totalReal = tareas.reduce((a,b)=>a+(+b.costo_real||0),0);
+  const gastosAd = S.gastos.filter(g=>g.proyecto_id===p.id).reduce((a,b)=>a + (+b.monto),0);
+  const totalInv = totalReal + gastosAd;
+  const pct = p.presupuesto>0 ? Math.min((totalInv/p.presupuesto)*100,100).toFixed(1) : '—';
+
+  doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text('RESUMEN FINANCIERO', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY: y, margin:{left:12,right:12},
+    head:[['Concepto','Monto']],
+    body:[
+      ['Costo estimado (tareas)', '$'+totalEst.toLocaleString('es-EC',{minimumFractionDigits:2})],
+      ['Costo real ejecutado', '$'+totalReal.toLocaleString('es-EC',{minimumFractionDigits:2})],
+      ['Gastos adicionales', '$'+gastosAd.toLocaleString('es-EC',{minimumFractionDigits:2})],
+      ['TOTAL INVERTIDO', '$'+totalInv.toLocaleString('es-EC',{minimumFractionDigits:2})],
+      ['Presupuesto', p.presupuesto?'$'+(+p.presupuesto).toLocaleString('es-EC',{minimumFractionDigits:2}):'—'],
+      ['Ejecución presupuestal', pct+'%'],
+    ],
+    styles:{fontSize:9},
+    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
+    bodyStyles:{},
+    alternateRowStyles:{fillColor:[249,250,251]},
+    columnStyles:{0:{fontStyle:'bold'},1:{halign:'right'}},
+    theme:'striped', margin:{left:12,right:12}
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Fases y tareas
+  if (fases && fases.length) {
+    if (y > 230) { doc.addPage(); y = 20; }
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text('FASES Y TAREAS', 12, y);
+    y += 4;
+
+    fases.forEach(f => {
+      const tareasF = tareas.filter(t=>t.fase_id===f.id);
+      const estF = tareasF.reduce((a,b)=>a+(+b.costo_estimado||0),0);
+      const realF = tareasF.reduce((a,b)=>a+(+b.costo_real||0),0);
+      const [r,g,b2] = estadoColor(f.estado);
+
+      if (y > 250) { doc.addPage(); y = 20; }
+
+      // Fase header
+      doc.setFillColor(r,g,b2);
+      doc.rect(12, y, 3, 7, 'F');
+      doc.setFillColor(248,247,246);
+      doc.rect(15, y, 183, 7, 'F');
+      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
+      doc.text(f.nombre, 18, y+5);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,100,100);
+      doc.text(f.estado.replace('_',' ').toUpperCase(), 140, y+5);
+      if (estF>0||realF>0) doc.text('Est: $'+estF.toLocaleString('es-EC',{minimumFractionDigits:0})+'  Real: $'+realF.toLocaleString('es-EC',{minimumFractionDigits:0}), 175, y+5, {align:'right'});
+      y += 9;
+
+      if (tareasF.length) {
+        doc.autoTable({
+          startY: y, margin:{left:18,right:12},
+          head:[['Tarea','Estado','Est. $','Real $']],
+          body: tareasF.map(t=>[
+            t.nombre + (t.descripcion ? '\n'+t.descripcion : ''),
+            t.estado.replace('_',' '),
+            t.costo_estimado?'$'+(+t.costo_estimado).toLocaleString('es-EC',{minimumFractionDigits:0}):'—',
+            t.costo_real?'$'+(+t.costo_real).toLocaleString('es-EC',{minimumFractionDigits:0}):'—'
+          ]),
+          styles:{fontSize:8, cellPadding:2.5},
+          headStyles:{fillColor:[40,40,40],textColor:255,fontSize:7.5},
+          columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:28,halign:'center'},2:{cellWidth:25,halign:'right'},3:{cellWidth:25,halign:'right'}},
+          alternateRowStyles:{fillColor:[252,252,252]},
+          theme:'striped', margin:{left:18,right:12}
+        });
+        y = doc.lastAutoTable.finalY + 4;
+      } else {
+        doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','italic');
+        doc.text('Sin tareas registradas', 22, y+4);
+        y += 8;
+      }
+    });
+  }
+
+  pdfFooter(doc);
+  doc.save(p.nombre.replace(/\s+/g,'_') + '_ficha.pdf');
+  toast('PDF generado ✓');
+}
+
+// ── REPORTE 2: ESTADO FINANCIERO ──
+function reporteFinanciero() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const p = S.currentProyecto;
+  const tareas = S.currentTareas;
+  const gastosP = S.gastos.filter(g=>g.proyecto_id===p.id);
+  const ventasP = S.ventas.filter(v=>v.proyecto_id===p.id);
+
+  let y = pdfHeader(doc, 'ESTADO FINANCIERO');
+
+  // Resumen ejecutivo
+  const totalEst = tareas.reduce((a,b)=>a+(+b.costo_estimado||0),0);
+  const totalReal = tareas.reduce((a,b)=>a+(+b.costo_real||0),0);
+  const gastosAd = gastosP.reduce((a,b)=>a + (+b.monto),0);
+  const totalInv = totalReal+gastosAd;
+  const ingresos = ventasP.filter(v=>v.estado!=='negociando').reduce((a,b)=>a + (+b.precio),0);
+  const utilidad = ingresos - totalInv;
+
+  // Tarjetas resumen
+  const cards = [
+    {label:'PRESUPUESTO', val:p.presupuesto?'$'+(+p.presupuesto).toLocaleString('es-EC',{minimumFractionDigits:2}):'—', color:[37,99,235]},
+    {label:'TOTAL INVERTIDO', val:'$'+totalInv.toLocaleString('es-EC',{minimumFractionDigits:2}), color:[217,119,6]},
+    {label:'INGRESOS', val:'$'+ingresos.toLocaleString('es-EC',{minimumFractionDigits:2}), color:[5,150,105]},
+    {label:'UTILIDAD', val:(utilidad>=0?'+':'')+' $'+Math.abs(utilidad).toLocaleString('es-EC',{minimumFractionDigits:2}), color:utilidad>=0?[5,150,105]:[220,38,38]},
+  ];
+  const cardW=44, cardH=18, cardX=12, cardGap=2;
+  cards.forEach((c,i) => {
+    const x = cardX + i*(cardW+cardGap);
+    doc.setFillColor(...c.color);
+    doc.roundedRect(x, y, cardW, cardH, 2, 2, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(c.label, x+cardW/2, y+5.5, {align:'center'});
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(c.val, x+cardW/2, y+13, {align:'center'});
+  });
+  y += cardH + 10;
+
+  // Desglose por categoría
+  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
+  doc.text('GASTOS POR CATEGORÍA', 12, y);
+  y += 4;
+  const catLabels = {materiales:'🧱 Materiales',mano_obra:'👷 Mano de obra',permisos:'📋 Permisos',transporte:'🚛 Transporte',imprevistos:'⚠️ Imprevistos',otros:'📦 Otros'};
+  const porCat = {};
+  gastosP.forEach(g => { porCat[g.categoria]=(porCat[g.categoria]||0)+(+g.monto); });
+  const catBody = Object.entries(porCat).map(([k,v])=>[catLabels[k]||k,'$'+v.toLocaleString('es-EC',{minimumFractionDigits:2}),((v/gastosAd)*100).toFixed(1)+'%']);
+  catBody.push(['TOTAL GASTOS ADICIONALES','$'+gastosAd.toLocaleString('es-EC',{minimumFractionDigits:2}),'100%']);
+  doc.autoTable({
+    startY:y, margin:{left:12,right:12},
+    head:[['Categoría','Monto','% del total']],
+    body: catBody,
+    styles:{fontSize:9},
+    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
+    columnStyles:{1:{halign:'right'},2:{halign:'right',cellWidth:25}},
+    alternateRowStyles:{fillColor:[249,250,251]},
+    theme:'striped'
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Tareas por estado
+  const estados = {completada:0, en_curso:0, pendiente:0};
+  tareas.forEach(t=>{ if(estados[t.estado]!==undefined) estados[t.estado]++; });
+  doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text('AVANCE DE TAREAS', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y, margin:{left:12,right:12},
+    head:[['Estado','Cantidad','Costo estimado','Costo real']],
+    body:[
+      ['✅ Completadas', tareas.filter(t=>t.estado==='completada').length,
+        '$'+tareas.filter(t=>t.estado==='completada').reduce((a,b)=>a+(+b.costo_estimado||0),0).toLocaleString('es-EC',{minimumFractionDigits:2}),
+        '$'+tareas.filter(t=>t.estado==='completada').reduce((a,b)=>a+(+b.costo_real||0),0).toLocaleString('es-EC',{minimumFractionDigits:2})],
+      ['🔨 En curso', tareas.filter(t=>t.estado==='en_curso').length,
+        '$'+tareas.filter(t=>t.estado==='en_curso').reduce((a,b)=>a+(+b.costo_estimado||0),0).toLocaleString('es-EC',{minimumFractionDigits:2}),'—'],
+      ['⏸ Pendientes', tareas.filter(t=>t.estado==='pendiente').length,
+        '$'+tareas.filter(t=>t.estado==='pendiente').reduce((a,b)=>a+(+b.costo_estimado||0),0).toLocaleString('es-EC',{minimumFractionDigits:2}),'—'],
+      ['TOTAL', tareas.length,
+        '$'+totalEst.toLocaleString('es-EC',{minimumFractionDigits:2}),
+        '$'+totalReal.toLocaleString('es-EC',{minimumFractionDigits:2})],
+    ],
+    styles:{fontSize:9},
+    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
+    columnStyles:{1:{halign:'center'},2:{halign:'right'},3:{halign:'right'}},
+    alternateRowStyles:{fillColor:[249,250,251]},
+    theme:'striped'
+  });
+
+  pdfFooter(doc);
+  doc.save(p.nombre.replace(/\s+/g,'_')+'_financiero.pdf');
+  toast('PDF generado ✓');
+}
+
+// ── REPORTE 3: LIBRO DE GASTOS ──
+function reporteGastos() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'landscape' });
+  const p = S.currentProyecto;
+  const gastosP = S.gastos.filter(g=>g.proyecto_id===p.id).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  const catLabels = {materiales:'Materiales',mano_obra:'Mano de obra',permisos:'Permisos',transporte:'Transporte',imprevistos:'Imprevistos',otros:'Otros'};
+
+  let y = pdfHeader(doc, 'LIBRO DE GASTOS', 'Para uso contable y tributario');
+  // Fix header width for landscape
+  doc.setFillColor(28,25,23);
+  doc.rect(0,0,297,32,'F');
+
+  const totalMonto = gastosP.reduce((a,b)=>a + (+b.monto),0);
+  const totalSubtotal = gastosP.reduce((a,b)=>a+(+b.subtotal_factura||0),0);
+  const totalIVA = gastosP.reduce((a,b)=>a+((+b.subtotal_factura||0)*(+b.iva_pct||15)/100),0);
+  const sinFactura = gastosP.filter(g=>!g.numero_factura).length;
+
+  // Summary
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
+  doc.text(`Total gastos: ${gastosP.length}  |  Sin factura: ${sinFactura}  |  Total IVA pagado: $${totalIVA.toLocaleString('es-EC',{minimumFractionDigits:2})}  |  Total: $${totalMonto.toLocaleString('es-EC',{minimumFractionDigits:2})}`, 12, y);
+  y += 6;
+
+  doc.autoTable({
+    startY: y, margin:{left:10,right:10},
+    head:[['Fecha','Descripción','Categoría','N° Factura','RUC Emisor','Razón Social','Subtotal','IVA%','IVA $','Total']],
+    body: gastosP.map(g=>{
+      const iva = (+g.subtotal_factura||0)*(+g.iva_pct||15)/100;
+      return [
+        g.fecha ? new Date(g.fecha+'T00:00:00').toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—',
+        g.descripcion || '—',
+        catLabels[g.categoria]||g.categoria||'—',
+        g.numero_factura || '—',
+        g.ruc_emisor || '—',
+        g.razon_social_emisor || '—',
+        g.subtotal_factura ? '$'+(+g.subtotal_factura).toLocaleString('es-EC',{minimumFractionDigits:2}) : '—',
+        g.iva_pct ? g.iva_pct+'%' : '15%',
+        g.subtotal_factura ? '$'+iva.toLocaleString('es-EC',{minimumFractionDigits:2}) : '—',
+        '$'+(+g.monto).toLocaleString('es-EC',{minimumFractionDigits:2})
+      ];
+    }),
+    foot:[[' ',' ',' ',' ',' ','TOTALES','$'+totalSubtotal.toLocaleString('es-EC',{minimumFractionDigits:2}),' ','$'+totalIVA.toLocaleString('es-EC',{minimumFractionDigits:2}),'$'+totalMonto.toLocaleString('es-EC',{minimumFractionDigits:2})]],
+    styles:{fontSize:7.5, cellPadding:2},
+    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold',fontSize:7},
+    footStyles:{fillColor:[245,158,11],textColor:[28,25,23],fontStyle:'bold'},
+    alternateRowStyles:{fillColor:[249,250,251]},
+    columnStyles:{0:{cellWidth:20},1:{cellWidth:42},2:{cellWidth:20},3:{cellWidth:28},4:{cellWidth:25},5:{cellWidth:38},6:{halign:'right',cellWidth:20},7:{halign:'center',cellWidth:12},8:{halign:'right',cellWidth:18},9:{halign:'right',cellWidth:20}},
+    theme:'striped'
+  });
+
+  pdfFooter(doc);
+  doc.save(p.nombre.replace(/\s+/g,'_')+'_gastos.pdf');
+  toast('PDF generado ✓');
+}
+
+// ── REPORTE 4: REPORTE DE VENTAS ──
+function reporteVentas() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const p = S.currentProyecto;
+  const unidades = S.currentUnidades;
+  const ventasP = S.ventas.filter(v=>v.proyecto_id===p.id);
+  const tipoLabels = {casa:'Casa',departamento:'Departamento',duplex:'Dúplex',suite:'Suite',penthouse:'PH',local_comercial:'Local comercial',oficina:'Oficina',parqueadero:'Parqueadero',bodega:'Bodega',otro:'Unidad'};
+  const formaLabels = {contado:'Contado',credito_directo:'Crédito directo',hipotecario:'Hipotecario'};
+  const estadoVLabels = {negociando:'Negociando',cerrada:'Cerrada',escriturada:'Escriturada'};
+
+  let y = pdfHeader(doc, 'REPORTE DE VENTAS');
+
+  // Resumen unidades
+  const disp = unidades.filter(u=>u.estado==='disponible').length;
+  const res = unidades.filter(u=>u.estado==='reservada').length;
+  const vend = unidades.filter(u=>u.estado==='vendida').length;
+  const totalIngresos = ventasP.filter(v=>v.estado!=='negociando').reduce((a,b)=>a + (+b.precio),0);
+  const potencial = unidades.filter(u=>u.estado==='disponible').reduce((a,b)=>a+(+b.precio_base||0),0);
+
+  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
+  doc.text('RESUMEN DE UNIDADES', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y, margin:{left:12,right:12},
+    head:[['Estado','Cantidad','%']],
+    body:[
+      ['🔵 Disponibles', disp, unidades.length?((disp/unidades.length)*100).toFixed(0)+'%':'—'],
+      ['🟡 Reservadas', res, unidades.length?((res/unidades.length)*100).toFixed(0)+'%':'—'],
+      ['🟢 Vendidas', vend, unidades.length?((vend/unidades.length)*100).toFixed(0)+'%':'—'],
+      ['TOTAL', unidades.length, '100%'],
+    ],
+    styles:{fontSize:9},
+    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
+    columnStyles:{1:{halign:'center'},2:{halign:'center'}},
+    alternateRowStyles:{fillColor:[249,250,251]},
+    theme:'striped'
+  });
+  y = doc.lastAutoTable.finalY + 6;
+
+  // Resumen financiero ventas
+  doc.autoTable({
+    startY:y, margin:{left:12,right:12},
+    head:[['Ingresos confirmados','Potencial restante','Total potencial']],
+    body:[['$'+totalIngresos.toLocaleString('es-EC',{minimumFractionDigits:2}),'$'+potencial.toLocaleString('es-EC',{minimumFractionDigits:2}),'$'+(totalIngresos+potencial).toLocaleString('es-EC',{minimumFractionDigits:2})]],
+    styles:{fontSize:10,fontStyle:'bold',halign:'center'},
+    headStyles:{fillColor:[5,96,70],textColor:255,fontStyle:'bold',halign:'center'},
+    theme:'plain'
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Detalle de ventas
+  if (ventasP.length) {
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text('DETALLE DE VENTAS', 12, y);
+    y += 4;
+    doc.autoTable({
+      startY:y, margin:{left:12,right:12},
+      head:[['Unidad','Comprador','Cédula','Teléfono','Precio','Forma de pago','Estado','Fecha']],
+      body: ventasP.map(v=>{
+        const u = unidades.find(x=>x.id===v.unidad_id);
+        return [
+          u ? (tipoLabels[u.tipo]||u.tipo)+' '+u.identificador : '—',
+          v.comprador_nombre||'—',
+          v.comprador_cedula||'—',
+          v.comprador_telefono||'—',
+          '$'+(+v.precio).toLocaleString('es-EC',{minimumFractionDigits:2}),
+          formaLabels[v.forma_pago]||v.forma_pago||'—',
+          estadoVLabels[v.estado]||v.estado||'—',
+          v.fecha_cierre?new Date(v.fecha_cierre+'T00:00:00').toLocaleDateString('es-EC'):'—'
+        ];
+      }),
+      styles:{fontSize:8, cellPadding:2.5},
+      headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold',fontSize:7.5},
+      alternateRowStyles:{fillColor:[249,250,251]},
+      columnStyles:{4:{halign:'right'},6:{halign:'center'},7:{halign:'center'}},
+      theme:'striped'
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  }
+
+  // Todas las unidades
+  doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text('ESTADO DE TODAS LAS UNIDADES', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y, margin:{left:12,right:12},
+    head:[['Unidad','Tipo','Área m²','Precio base','Estado','Notas']],
+    body: unidades.map(u=>[
+      u.identificador,
+      tipoLabels[u.tipo]||u.tipo,
+      u.area_m2?u.area_m2+' m²':'—',
+      u.precio_base?'$'+(+u.precio_base).toLocaleString('es-EC',{minimumFractionDigits:2}):'—',
+      u.estado?.toUpperCase()||'—',
+      u.notas||'—'
+    ]),
+    styles:{fontSize:8, cellPadding:2.5},
+    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
+    alternateRowStyles:{fillColor:[249,250,251]},
+    theme:'striped'
+  });
+
+  pdfFooter(doc);
+  doc.save(p.nombre.replace(/\s+/g,'_')+'_ventas.pdf');
+  toast('PDF generado ✓');
+}
+
 </script>
 </body>
 </html>
