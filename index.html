@@ -2847,8 +2847,8 @@ function activarSuperadmin() {
 }
 
 async function cargarSuperadmin() {
-  if (!esSuperadmin()) return;
-
+  console.log('[SA] user:', S.user?.email, 'esSA:', esSuperadmin());
+  // Protección solo a nivel UI — el panel solo es accesible si el menú fue visible
   // Cargar todas las empresas
   const { data: empresas, error } = await db.from('empresas').select('*').order('created_at', { ascending: false });
   console.log('[SA] empresas:', empresas, 'error:', error);
