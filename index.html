@@ -350,6 +350,22 @@
           <input type="password" id="login-password" class="form-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')handleLogin()">
         </div>
         <button class="btn btn-primary" id="btn-login" onclick="handleLogin()">Ingresar</button>
+        <div style="text-align:center;margin-top:12px">
+          <span onclick="showRecovery()" style="font-size:12px;color:var(--s400);cursor:pointer;text-decoration:underline">¿Olvidaste tu contraseña?</span>
+        </div>
+      </div>
+
+      <!-- Recovery form -->
+      <div id="form-recovery" style="display:none">
+        <p style="font-size:13px;color:var(--s400);margin-bottom:16px;line-height:1.5">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</p>
+        <div class="form-group">
+          <label class="form-label">Correo electrónico</label>
+          <input type="email" id="rec-email" class="form-input" placeholder="tu@correo.com">
+        </div>
+        <button class="btn btn-primary" id="btn-rec" onclick="handleRecovery()">Enviar enlace</button>
+        <div style="text-align:center;margin-top:12px">
+          <span onclick="switchTab('login')" style="font-size:12px;color:var(--s400);cursor:pointer;text-decoration:underline">← Volver al ingreso</span>
+        </div>
       </div>
 
       <div id="form-register" style="display:none">
@@ -433,7 +449,7 @@
             Panel Admin
           </div>
         </div>
-        <button id="btn-sb-logout" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--s400);font-size:13px;cursor:pointer;font-family:var(--fb);text-align:left;display:flex;align-items:center;gap:8px">
+        <button id="btn-sb-logout" onclick="handleLogout()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--s400);font-size:13px;cursor:pointer;font-family:var(--fb);text-align:left;display:flex;align-items:center;gap:8px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Cerrar sesión
         </button>
@@ -452,7 +468,7 @@
         <div class="avatar" id="user-avatar" onclick="toggleDropdown()">D</div>
         <div class="dropdown-menu" id="user-dropdown">
           <div class="dropdown-item" onclick="navTo('perfil');toggleDropdown(true)">👤 Mi perfil</div>
-          <div class="dropdown-item danger" id="btn-logout-dd">🚪 Cerrar sesión</div>
+          <div class="dropdown-item danger" id="btn-logout-dd" onclick="handleLogout()">🚪 Cerrar sesión</div>
         </div>
       </div>
     </div>
@@ -798,7 +814,8 @@
 <div class="modal-overlay" id="modal-gasto">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Registrar gasto</div>
+    <div class="modal-title" id="mg-title">Registrar gasto</div>
+    <input type="hidden" id="mg-edit-id">
     <div class="form-group"><label class="form-label-light">Proyecto *</label><select id="mg-proyecto" class="form-input-light"></select></div>
     <div class="form-group"><label class="form-label-light">Descripción *</label><input type="text" id="mg-desc" class="form-input-light" placeholder="Ej: Compra de cemento 50 sacos"></div>
     <div class="row2">
@@ -1186,6 +1203,75 @@
     <div style="display:flex;gap:8px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-invitar')">Cancelar</button>
       <button class="btn btn-primary" style="flex:1" id="btn-inv" onclick="guardarInvitacion()">Invitar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editar Venta -->
+<div class="modal-overlay" id="modal-editar-venta">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar venta</div>
+    <input type="hidden" id="ev-id">
+    <div class="form-group"><label class="form-label-light">Nombre del comprador *</label><input type="text" id="ev-comprador" class="form-input-light"></div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Cédula</label><input type="text" id="ev-cedula" class="form-input-light"></div>
+      <div class="form-group"><label class="form-label-light">Teléfono</label><input type="text" id="ev-tel" class="form-input-light"></div>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Precio ($)</label><input type="number" id="ev-precio" class="form-input-light"></div>
+      <div class="form-group"><label class="form-label-light">Fecha</label><input type="date" id="ev-fecha" class="form-input-light"></div>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Forma de pago</label>
+        <select id="ev-forma" class="form-input-light">
+          <option value="contado">Contado</option>
+          <option value="credito_directo">Crédito directo</option>
+          <option value="hipotecario">Hipotecario</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label-light">Estado</label>
+        <select id="ev-estado" class="form-input-light">
+          <option value="negociando">Negociando</option>
+          <option value="cerrada">Cerrada</option>
+          <option value="escriturada">Escriturada</option>
+        </select>
+      </div>
+    </div>
+    <div id="ev-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-danger btn-sm" onclick="eliminarVentaDesdeModal()">🗑️</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-editar-venta')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-ev" onclick="guardarEdicionVenta()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cuotas -->
+<div class="modal-overlay" id="modal-cuotas">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Plan de pagos</div>
+    <input type="hidden" id="cq-venta-id">
+    <div id="cq-venta-info" style="background:var(--s50);border-radius:10px;padding:12px;margin-bottom:14px"></div>
+    <!-- Configurar nuevo plan -->
+    <div id="cq-config">
+      <div class="form-group"><label class="form-label-light" style="font-weight:600;color:var(--dark2)">Configurar plan de pagos</label></div>
+      <div class="row2">
+        <div class="form-group"><label class="form-label-light">Entrada ($)</label><input type="number" id="cq-entrada" class="form-input-light" placeholder="0.00" oninput="calcularCuotas()"></div>
+        <div class="form-group"><label class="form-label-light">Número de cuotas</label><input type="number" id="cq-num" class="form-input-light" value="12" min="1" max="360" oninput="calcularCuotas()"></div>
+      </div>
+      <div class="row2">
+        <div class="form-group"><label class="form-label-light">Fecha primera cuota</label><input type="date" id="cq-fecha-inicio" class="form-input-light"></div>
+        <div class="form-group"><label class="form-label-light">Valor por cuota</label><input type="number" id="cq-monto-cuota" class="form-input-light" placeholder="Auto" oninput="calcularCuotasInverso()"></div>
+      </div>
+      <div id="cq-preview" style="background:var(--amber-l);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--amber-d);margin-bottom:12px;display:none"></div>
+      <button class="btn btn-primary" id="btn-cq-gen" onclick="generarCuotas()" style="margin-bottom:14px">Generar plan de pagos</button>
+    </div>
+    <!-- Lista de cuotas existentes -->
+    <div id="cq-lista"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-cuotas')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2368,9 +2454,10 @@ function gastoHTML(g, showProy = true) {
           <div class="gasto-meta">${proy?proy.nombre+' · ':''}${fdate(g.fecha)}${tieneFactura?' · 🧾 Fact.':''}</div>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+      <div style="display:flex;align-items:center;gap:6px">
         <div class="gasto-monto">−${fmt(g.monto)}</div>
-        ${g.archivo_url?`<a href="${g.archivo_url}" target="_blank" style="font-size:10px;color:var(--amber-d);font-weight:600;text-decoration:none">📎 Ver factura</a>`:''}
+        <button onclick="editarGasto('${g.id}')" style="background:var(--s100);border:none;border-radius:6px;padding:4px 7px;cursor:pointer;font-size:12px" title="Editar">✏️</button>
+        <button onclick="eliminarGasto('${g.id}')" style="background:#FEE2E2;border:none;border-radius:6px;padding:4px 7px;cursor:pointer;font-size:12px" title="Eliminar">🗑️</button>
       </div>
     </div>
     ${tieneFactura?`<div style="margin-top:6px;padding:6px 10px;background:var(--s50);border-radius:8px;font-size:11px;color:var(--s600);display:flex;gap:10px;flex-wrap:wrap">
@@ -2378,6 +2465,7 @@ function gastoHTML(g, showProy = true) {
       ${g.ruc_emisor?`<span>RUC: ${g.ruc_emisor}</span>`:''}
       ${g.razon_social_emisor?`<span>${g.razon_social_emisor}</span>`:''}
       ${g.subtotal_factura?`<span>Sub: ${fmt(g.subtotal_factura)} + IVA${g.iva_pct||15}%</span>`:''}
+      ${g.archivo_url?`<a href="${g.archivo_url}" target="_blank" style="color:var(--amber-d);font-weight:600;text-decoration:none">📎 Ver</a>`:''}
     </div>`:''}
   </div>`;
 }
@@ -2471,6 +2559,7 @@ function renderVentas() {
   if (!S.ventas.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">🏠</div><h3>Sin ventas aún</h3><p>Registra la primera venta de un proyecto</p></div>`; return; }
   el.innerHTML = S.ventas.map(v => {
     const proy = S.proyectos.find(p => p.id === v.proyecto_id);
+    const esCreditoDirecto = v.forma_pago === 'credito_directo';
     return `<div class="venta-item">
       <div class="venta-top">
         <div>
@@ -2478,9 +2567,14 @@ function renderVentas() {
           <div class="venta-proyecto">${proy?proy.nombre:''} · ${flabel(v.forma_pago)}</div>
           ${v.fecha_cierre?`<div style="font-size:11px;color:var(--s400);margin-top:2px">${fdate(v.fecha_cierre)}</div>`:''}
         </div>
-        <div style="text-align:right">
+        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <div class="venta-precio">${fmt(v.precio)}</div>
-          <span class="badge badge-${v.estado}" style="margin-top:4px;display:inline-flex">${vlabel(v.estado)}</span>
+          <span class="badge badge-${v.estado}">${vlabel(v.estado)}</span>
+          <div style="display:flex;gap:4px;margin-top:2px">
+            <button onclick="editarVenta('${v.id}')" style="background:var(--s100);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
+            <button onclick="eliminarVenta('${v.id}')" style="background:#FEE2E2;border:none;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">🗑️</button>
+            ${esCreditoDirecto?`<button onclick="verCuotas('${v.id}')" style="background:#DBEAFE;color:#1E40AF;border:none;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px;font-weight:600">📅 Cuotas</button>`:''}
+          </div>
         </div>
       </div>
       ${v.comprador_cedula||v.comprador_telefono?`<div style="display:flex;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--s100)">
@@ -3255,6 +3349,445 @@ function reporteVentas(){
   h+='<tr class="tf"><td colspan="2">POTENCIAL RESTANTE</td><td class="tr">'+M(pot)+'</td><td colspan="2"></td></tr></table></div>';
   h+=FTR()+'</div>';
   abrirReporte(h,'Reporte de Ventas — '+p.nombre);
+}
+
+
+// ══ RECUPERACIÓN DE CONTRASEÑA ══
+function showRecovery() {
+  document.getElementById('form-login').style.display = 'none';
+  document.getElementById('form-register').style.display = 'none';
+  document.getElementById('form-recovery').style.display = 'block';
+  hideErr('auth-error');
+}
+
+async function handleRecovery() {
+  const email = document.getElementById('rec-email').value.trim();
+  if (!email) return showErr('auth-error', 'Ingresa tu correo electrónico');
+  setLoading('btn-rec', true);
+  const { error } = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href
+  });
+  setLoading('btn-rec', false);
+  if (error) {
+    showErr('auth-error', 'Error: ' + error.message);
+  } else {
+    document.getElementById('form-recovery').innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:40px;margin-bottom:12px">✉️</div>
+        <div style="color:var(--white);font-size:15px;font-weight:600;margin-bottom:8px">Correo enviado</div>
+        <div style="color:var(--s400);font-size:13px;line-height:1.5">Revisa tu bandeja de entrada y sigue el enlace para restablecer tu contraseña.</div>
+      </div>`;
+  }
+}
+
+// ══ FLUJO DE INVITACIÓN - verificar al registrarse ══
+async function verificarInvitacion(email) {
+  try {
+    const { data: inv } = await db.from('invitaciones')
+      .select('*').eq('email', email).eq('estado', 'pendiente').maybeSingle();
+    if (!inv) return null;
+    return inv;
+  } catch(e) { return null; }
+}
+
+// Override handleRegister to check invitations
+const _originalHandleRegister = handleRegister;
+// We'll update handleRegister directly:
+
+// ══ EDIT/DELETE GASTOS ══
+function editarGasto(gastoId) {
+  const g = S.gastos.find(x => x.id === gastoId);
+  if (!g) return;
+  document.getElementById('mg-title').textContent = 'Editar gasto';
+  document.getElementById('mg-edit-id').value = g.id;
+  // Fill selector
+  const sel = document.getElementById('mg-proyecto');
+  sel.innerHTML = S.proyectos.map(p => `<option value="${p.id}" ${p.id === g.proyecto_id ? 'selected':''}>${p.nombre}</option>`).join('');
+  document.getElementById('mg-desc').value = g.descripcion || '';
+  document.getElementById('mg-monto').value = g.monto || '';
+  document.getElementById('mg-fecha').value = g.fecha || '';
+  document.getElementById('mg-cat').value = g.categoria || 'otros';
+  // Factura fields
+  if (g.numero_factura || g.subtotal_factura) {
+    document.getElementById('factura-fields').style.display = 'block';
+    document.getElementById('factura-toggle-label').textContent = '− Ocultar';
+  }
+  document.getElementById('mg-num-factura').value = g.numero_factura || '';
+  document.getElementById('mg-fecha-factura').value = g.fecha_factura || '';
+  document.getElementById('mg-ruc').value = g.ruc_emisor || '';
+  document.getElementById('mg-razon').value = g.razon_social_emisor || '';
+  document.getElementById('mg-subtotal').value = g.subtotal_factura || '';
+  document.getElementById('mg-iva-pct').value = g.iva_pct || 15;
+  document.getElementById('mg-total-factura').value = g.total_factura || '';
+  archivoSeleccionado = null;
+  openModal('modal-gasto');
+}
+
+async function eliminarGasto(gastoId) {
+  if (!confirm('¿Eliminar este gasto? No se puede deshacer.')) return;
+  await db.from('gastos').delete().eq('id', gastoId);
+  S.gastos = S.gastos.filter(g => g.id !== gastoId);
+  toast('Gasto eliminado');
+  renderGastos(S.gastos);
+  renderDashboard();
+  if (S.currentProyecto) { await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
+}
+
+// Update guardarGasto to handle edit mode
+const _origGuardarGasto = guardarGasto;
+async function guardarGasto() {
+  if (!puedo('registrarGasto')) return toast('No tienes permiso para registrar gastos');
+  const editId = document.getElementById('mg-edit-id')?.value;
+  const desc = v('mg-desc'), monto = parseFloat(v('mg-monto')), fecha = v('mg-fecha');
+  if (!desc || !monto || !fecha) return showErr('mg-error', 'Completa los campos obligatorios');
+
+  const btn = document.getElementById('btn-mg');
+  const txtEl = document.getElementById('btn-mg-txt');
+  btn.disabled = true; if(txtEl) txtEl.textContent = 'Guardando...';
+
+  try {
+    const gastoData = {
+      proyecto_id: v('mg-proyecto'),
+      empresa_id: S.empresa.id,
+      descripcion: desc, monto, fecha,
+      categoria: v('mg-cat'),
+      numero_factura: v('mg-num-factura') || null,
+      razon_social_emisor: v('mg-razon') || null,
+      ruc_emisor: v('mg-ruc') || null,
+      subtotal_factura: parseFloat(v('mg-subtotal')) || null,
+      iva_pct: parseFloat(v('mg-iva-pct')) || 15,
+      total_factura: parseFloat(v('mg-total-factura')) || null
+    };
+
+    if (editId) {
+      // UPDATE
+      const { error } = await dbWrite(db.from('gastos').update(gastoData).eq('id', editId));
+      if (error) throw error;
+      const idx = S.gastos.findIndex(g => g.id === editId);
+      if (idx >= 0) S.gastos[idx] = { ...S.gastos[idx], ...gastoData, id: editId };
+      toast('Gasto actualizado ✓');
+    } else {
+      // INSERT
+      const { data: gasto, error } = await dbWrite(db.from('gastos').insert(gastoData).select().single());
+      if (error) throw error;
+      if (archivoSeleccionado && gasto) {
+        if(txtEl) txtEl.textContent = 'Subiendo factura...';
+        const url = await subirFactura(gasto.id);
+        if (url) await db.from('gastos').update({ archivo_url: url }).eq('id', gasto.id);
+      }
+    }
+    archivoSeleccionado = null;
+    document.getElementById('mg-edit-id').value = '';
+    document.getElementById('mg-title').textContent = 'Registrar gasto';
+    closeModal('modal-gasto');
+    toast(editId ? 'Gasto actualizado ✓' : 'Gasto registrado ✓');
+    await cargarGastos();
+    renderGastos(S.gastos);
+    renderDashboard();
+    if (S.currentProyecto) { await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
+  } catch(e) { showErr('mg-error', e.message || 'Error al guardar'); console.error(e); }
+  btn.disabled = false; if(txtEl) txtEl.textContent = 'Guardar gasto';
+}
+
+// ══ EDIT/DELETE VENTAS ══
+function editarVenta(ventaId) {
+  const v2 = S.ventas.find(x => x.id === ventaId);
+  if (!v2) return;
+  document.getElementById('ev-id').value = v2.id;
+  document.getElementById('ev-comprador').value = v2.comprador_nombre || '';
+  document.getElementById('ev-cedula').value = v2.comprador_cedula || '';
+  document.getElementById('ev-tel').value = v2.comprador_telefono || '';
+  document.getElementById('ev-precio').value = v2.precio || '';
+  document.getElementById('ev-fecha').value = v2.fecha_cierre || '';
+  document.getElementById('ev-forma').value = v2.forma_pago || 'contado';
+  document.getElementById('ev-estado').value = v2.estado || 'negociando';
+  document.getElementById('ev-error').classList.remove('show');
+  openModal('modal-editar-venta');
+}
+
+async function guardarEdicionVenta() {
+  const id = document.getElementById('ev-id').value;
+  const comprador = document.getElementById('ev-comprador').value.trim();
+  const precio = parseFloat(document.getElementById('ev-precio').value);
+  if (!comprador || !precio) return showErr('ev-error', 'Nombre y precio son obligatorios');
+  setLoading('btn-ev', true);
+  try {
+    const data = {
+      comprador_nombre: comprador,
+      comprador_cedula: document.getElementById('ev-cedula').value.trim() || null,
+      comprador_telefono: document.getElementById('ev-tel').value.trim() || null,
+      precio,
+      fecha_cierre: document.getElementById('ev-fecha').value || null,
+      forma_pago: document.getElementById('ev-forma').value,
+      estado: document.getElementById('ev-estado').value
+    };
+    const { error } = await dbWrite(db.from('ventas').update(data).eq('id', id));
+    if (error) throw error;
+    const idx = S.ventas.findIndex(x => x.id === id);
+    if (idx >= 0) S.ventas[idx] = { ...S.ventas[idx], ...data };
+    closeModal('modal-editar-venta');
+    toast('Venta actualizada ✓');
+    renderVentas();
+    renderDashboard();
+    if (S.currentProyecto) { await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
+  } catch(e) { showErr('ev-error', e.message || 'Error al guardar'); }
+  setLoading('btn-ev', false);
+}
+
+async function eliminarVenta(ventaId) {
+  if (!confirm('¿Eliminar esta venta? La unidad volverá a estar disponible.')) return;
+  const v2 = S.ventas.find(x => x.id === ventaId);
+  await db.from('cuotas').delete().eq('venta_id', ventaId);
+  await db.from('ventas').delete().eq('id', ventaId);
+  if (v2?.unidad_id) await db.from('unidades').update({ estado:'disponible' }).eq('id', v2.unidad_id);
+  S.ventas = S.ventas.filter(x => x.id !== ventaId);
+  toast('Venta eliminada');
+  renderVentas();
+  renderDashboard();
+  if (S.currentProyecto) { await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
+}
+
+function eliminarVentaDesdeModal() {
+  const id = document.getElementById('ev-id').value;
+  closeModal('modal-editar-venta');
+  eliminarVenta(id);
+}
+
+// ══ CUOTAS ══
+let cuotasActuales = [];
+
+async function verCuotas(ventaId) {
+  const venta = S.ventas.find(x => x.id === ventaId);
+  if (!venta) return;
+  document.getElementById('cq-venta-id').value = ventaId;
+  document.getElementById('cq-fecha-inicio').value = new Date().toISOString().split('T')[0];
+
+  // Info de la venta
+  const unidad = S.currentUnidades.find(u => u.id === venta.unidad_id);
+  document.getElementById('cq-venta-info').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:600;font-size:14px">${venta.comprador_nombre}</div>
+        <div style="font-size:12px;color:var(--s400);margin-top:2px">${unidad?unidad.identificador+' · ':''} ${flabel(venta.forma_pago)}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--green)">${fmt(venta.precio)}</div>
+      </div>
+    </div>`;
+
+  // Calcular cuota inicial
+  document.getElementById('cq-num').value = 12;
+  calcularCuotas();
+
+  // Cargar cuotas existentes
+  const { data: cuotas } = await db.from('cuotas').select('*').eq('venta_id', ventaId).order('numero');
+  cuotasActuales = cuotas || [];
+
+  const configDiv = document.getElementById('cq-config');
+  if (cuotas && cuotas.length > 0) {
+    configDiv.querySelector('button').textContent = '↺ Regenerar plan';
+  } else {
+    configDiv.querySelector('button').textContent = 'Generar plan de pagos';
+  }
+
+  renderCuotas(cuotas || [], venta);
+  openModal('modal-cuotas');
+}
+
+function calcularCuotas() {
+  const ventaId = document.getElementById('cq-venta-id').value;
+  const venta = S.ventas.find(x => x.id === ventaId);
+  if (!venta) return;
+  const entrada = parseFloat(document.getElementById('cq-entrada').value) || 0;
+  const num = parseInt(document.getElementById('cq-num').value) || 12;
+  const saldo = venta.precio - entrada;
+  const cuota = saldo > 0 ? saldo / num : 0;
+  document.getElementById('cq-monto-cuota').value = cuota > 0 ? cuota.toFixed(2) : '';
+  const prev = document.getElementById('cq-preview');
+  if (num > 0 && saldo > 0) {
+    prev.style.display = 'block';
+    prev.innerHTML = `${num} cuotas de <strong>${fmt(cuota)}</strong> c/u${entrada>0?' · Entrada: '+fmt(entrada):''} · Total: ${fmt(venta.precio)}`;
+  }
+}
+
+function calcularCuotasInverso() {
+  const ventaId = document.getElementById('cq-venta-id').value;
+  const venta = S.ventas.find(x => x.id === ventaId);
+  if (!venta) return;
+  const entrada = parseFloat(document.getElementById('cq-entrada').value) || 0;
+  const montoCuota = parseFloat(document.getElementById('cq-monto-cuota').value);
+  if (!montoCuota) return;
+  const saldo = venta.precio - entrada;
+  const num = Math.ceil(saldo / montoCuota);
+  document.getElementById('cq-num').value = num;
+  const prev = document.getElementById('cq-preview');
+  prev.style.display = 'block';
+  prev.innerHTML = `${num} cuotas de <strong>${fmt(montoCuota)}</strong> c/u${entrada>0?' · Entrada: '+fmt(entrada):''} · Total aprox: ${fmt(venta.precio)}`;
+}
+
+async function generarCuotas() {
+  const ventaId = document.getElementById('cq-venta-id').value;
+  const venta = S.ventas.find(x => x.id === ventaId);
+  if (!venta) return;
+  const entrada = parseFloat(document.getElementById('cq-entrada').value) || 0;
+  const num = parseInt(document.getElementById('cq-num').value) || 12;
+  const montoCuota = parseFloat(document.getElementById('cq-monto-cuota').value);
+  const fechaInicio = document.getElementById('cq-fecha-inicio').value;
+  if (!montoCuota || !fechaInicio) { toast('Completa los campos del plan'); return; }
+  if (!confirm(`¿Generar ${num} cuotas de ${fmt(montoCuota)}? Esto reemplazará el plan actual.`)) return;
+
+  setLoading('btn-cq-gen', true);
+  try {
+    // Eliminar cuotas anteriores
+    await db.from('cuotas').delete().eq('venta_id', ventaId);
+
+    // Generar nuevas cuotas
+    const cuotas = [];
+    let fecha = new Date(fechaInicio + 'T00:00:00');
+    for (let i = 1; i <= num; i++) {
+      cuotas.push({ venta_id: ventaId, numero: i, monto: montoCuota, fecha_limite: fecha.toISOString().split('T')[0], estado: 'pendiente' });
+      fecha.setMonth(fecha.getMonth() + 1);
+    }
+    // Insert en lotes de 10
+    for (let i = 0; i < cuotas.length; i += 10) {
+      await db.from('cuotas').insert(cuotas.slice(i, i+10));
+    }
+    const { data: nuevasCuotas } = await db.from('cuotas').select('*').eq('venta_id', ventaId).order('numero');
+    cuotasActuales = nuevasCuotas || [];
+    renderCuotas(nuevasCuotas || [], venta);
+    toast(`Plan de ${num} cuotas generado ✓`);
+  } catch(e) { toast('Error: ' + e.message); console.error(e); }
+  setLoading('btn-cq-gen', false);
+}
+
+function renderCuotas(cuotas, venta) {
+  const lista = document.getElementById('cq-lista');
+  if (!cuotas.length) { lista.innerHTML = '<p style="font-size:13px;color:var(--s400);text-align:center;padding:12px">Sin cuotas generadas aún.</p>'; return; }
+
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const pagadas = cuotas.filter(c => c.estado === 'pagada').length;
+  const totalPagado = cuotas.filter(c => c.estado === 'pagada').reduce((a,b) => a+(+b.monto||0), 0);
+  const totalPendiente = cuotas.filter(c => c.estado !== 'pagada').reduce((a,b) => a+(+b.monto||0), 0);
+  const vencidas = cuotas.filter(c => c.estado === 'pendiente' && new Date(c.fecha_limite+'T00:00:00') < hoy).length;
+
+  lista.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:#D1FAE5;border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:#065F46;font-weight:600">PAGADO</div>
+        <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:#065F46">${fmt(totalPagado)}</div>
+        <div style="font-size:10px;color:#065F46">${pagadas}/${cuotas.length} cuotas</div>
+      </div>
+      <div style="background:#FEF3C7;border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:#92400E;font-weight:600">PENDIENTE</div>
+        <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:#92400E">${fmt(totalPendiente)}</div>
+      </div>
+      <div style="background:${vencidas>0?'#FEE2E2':'#F3F4F6'};border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:${vencidas>0?'#DC2626':'#6B7280'};font-weight:600">VENCIDAS</div>
+        <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:${vencidas>0?'#DC2626':'#6B7280'}">${vencidas}</div>
+      </div>
+    </div>
+    <div style="max-height:300px;overflow-y:auto">
+      ${cuotas.map(c => {
+        const fechaC = new Date(c.fecha_limite+'T00:00:00');
+        const vencida = c.estado === 'pendiente' && fechaC < hoy;
+        const bg = c.estado === 'pagada' ? '#D1FAE5' : vencida ? '#FEE2E2' : '#fff';
+        const color = c.estado === 'pagada' ? '#065F46' : vencida ? '#DC2626' : '#292524';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--s100);background:${bg};padding:9px 10px;border-radius:8px;margin-bottom:4px">
+          <div style="width:28px;height:28px;border-radius:50%;background:${bg==='#fff'?'var(--s100)':bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${color};flex-shrink:0">${c.numero}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:${color}">${fmt(c.monto)}</div>
+            <div style="font-size:11px;color:var(--s400)">${fechaC.toLocaleDateString('es-EC',{day:'2-digit',month:'short',year:'numeric'})}${vencida?' · <strong style="color:#DC2626">VENCIDA</strong>':''}</div>
+          </div>
+          ${c.estado === 'pagada'
+            ? `<button onclick="toggleCuota('${c.id}','pendiente')" style="background:#D1FAE5;border:none;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:600;color:#065F46">✓ Pagada</button>`
+            : `<button onclick="toggleCuota('${c.id}','pagada')" style="background:var(--s100);border:none;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:600;color:var(--s600)">Marcar pagada</button>`
+          }
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function toggleCuota(cuotaId, nuevoEstado) {
+  await db.from('cuotas').update({ estado: nuevoEstado }).eq('id', cuotaId);
+  const c = cuotasActuales.find(x => x.id === cuotaId);
+  if (c) c.estado = nuevoEstado;
+  const ventaId = document.getElementById('cq-venta-id').value;
+  const venta = S.ventas.find(x => x.id === ventaId);
+  renderCuotas(cuotasActuales, venta);
+}
+
+// ══ INVITACIÓN - verificar al completar registro ══
+// Intercept after empresa creation to check invitations
+const _origIniciar = iniciar;
+async function iniciar() {
+  try {
+    const { data: profile, error: profErr } = await withTimeout(
+      db.from('profiles').select('*').eq('id', S.user.id).maybeSingle(), 20000);
+
+    if (profErr) {
+      await db.auth.refreshSession();
+      const { data: profile2 } = await db.from('profiles').select('*').eq('id', S.user.id).maybeSingle();
+      if (!profile2) { showScreen('onboarding'); return; }
+      return iniciar();
+    }
+
+    if (!profile) {
+      const { error: insErr } = await db.from('profiles').insert({
+        id: S.user.id,
+        nombre: S.user.user_metadata?.nombre || S.user.email.split('@')[0],
+        email: S.user.email
+      });
+      if (insErr && insErr.code !== '23505') console.error('Insert profile error:', insErr);
+
+      // ← CHECK INVITATION HERE
+      const inv = await verificarInvitacion(S.user.email);
+      if (inv) {
+        await db.from('profiles').update({ empresa_id: inv.empresa_id, rol: inv.rol }).eq('id', S.user.id);
+        await db.from('invitaciones').update({ estado: 'aceptada' }).eq('id', inv.id);
+        // Reload profile
+        const { data: updatedProfile } = await db.from('profiles').select('*').eq('id', S.user.id).maybeSingle();
+        if (updatedProfile?.empresa_id) {
+          // Skip onboarding - has company from invitation
+          const { data: empresa } = await db.from('empresas').select('*').eq('id', updatedProfile.empresa_id).single();
+          S.profile = updatedProfile; S.empresa = empresa;
+          actualizarUI();
+          await Promise.all([cargarProyectos(), cargarGastos(), cargarVentas(), cargarTareas()]);
+          aplicarPermisos(); activarSuperadmin();
+          if (puedo('gestionarUsuarios')) cargarUsuariosEmpresa();
+          showScreen('main'); navTo('dashboard');
+          toast('¡Bienvenido! Fuiste agregado a ' + empresa?.nombre);
+          return;
+        }
+      }
+      showScreen('onboarding'); return;
+    }
+
+    S.profile = profile;
+    if (!profile.empresa_id) {
+      // Check invitation before showing onboarding
+      const inv = await verificarInvitacion(S.user.email);
+      if (inv) {
+        await db.from('profiles').update({ empresa_id: inv.empresa_id, rol: inv.rol }).eq('id', S.user.id);
+        await db.from('invitaciones').update({ estado: 'aceptada' }).eq('id', inv.id);
+        S.profile = { ...profile, empresa_id: inv.empresa_id, rol: inv.rol };
+      } else {
+        showScreen('onboarding'); return;
+      }
+    }
+
+    const { data: empresa, error: empErr } = await db.from('empresas').select('*').eq('id', S.profile.empresa_id).single();
+    S.empresa = empErr || !empresa ? { id: S.profile.empresa_id, nombre: 'Mi empresa', plan: 'free' } : empresa;
+
+    actualizarUI();
+    await Promise.all([cargarProyectos(), cargarGastos(), cargarVentas(), cargarTareas()]);
+    aplicarPermisos(); activarSuperadmin();
+    if (puedo('gestionarUsuarios')) cargarUsuariosEmpresa();
+    showScreen('main'); navTo('dashboard');
+
+  } catch(e) {
+    console.error('Error en iniciar():', e);
+    toast('Error al cargar la aplicación. Recarga la página.');
+  }
 }
 
 </script>
