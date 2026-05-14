@@ -3085,446 +3085,176 @@ function toggleDropdown(close = false) {
 
 document.addEventListener('click', e => { if (!e.target.closest('.dropdown')) document.getElementById('user-dropdown')?.classList.remove('show'); });
 
-// ══════════════════════════════════════════════
-// REPORTES PDF
-// ══════════════════════════════════════════════
 
-function pdfHeader(doc, titulo, subtitulo='') {
-  const p = S.currentProyecto;
-  const emp = S.empresa;
-  // Fondo header
-  doc.setFillColor(28, 25, 23);
-  doc.rect(0, 0, 210, 32, 'F');
-  // Logo placeholder
-  doc.setFillColor(245, 158, 11);
-  doc.roundedRect(12, 8, 16, 16, 2, 2, 'F');
-  doc.setTextColor(28, 25, 23);
-  doc.setFontSize(9); doc.setFont('helvetica','bold');
-  doc.text('E', 20, 18.5, {align:'center'});
-  // Empresa y titulo
-  doc.setTextColor(245, 158, 11);
-  doc.setFontSize(14); doc.setFont('helvetica','bold');
-  doc.text('Edifika', 33, 13);
-  doc.setTextColor(168, 162, 158);
-  doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text(emp?.nombre || '', 33, 19);
-  // Titulo reporte
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(13); doc.setFont('helvetica','bold');
-  doc.text(titulo, 210-12, 13, {align:'right'});
-  if (subtitulo) {
-    doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.setTextColor(168,162,158);
-    doc.text(subtitulo, 210-12, 19, {align:'right'});
-  }
-  // Proyecto
-  doc.setFillColor(245,158,11);
-  doc.rect(0, 32, 210, 0.5, 'F');
-  doc.setFontSize(9); doc.setFont('helvetica','bold');
-  doc.setTextColor(40,40,40);
-  doc.text(p?.nombre || '', 12, 40);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8);
-  doc.setTextColor(100,100,100);
-  doc.text([
-    p?.ubicacion || '',
-    'Generado: ' + new Date().toLocaleDateString('es-EC',{day:'2-digit',month:'long',year:'numeric'})
-  ].filter(Boolean).join('  |  '), 12, 46);
-  return 52;
+
+
+// ══ REPORTES PDF (print-based) ══
+
+function abrirReporte(html, titulo) {
+  const win = window.open('', '_blank');
+  if (!win) { toast('Permite ventanas emergentes para generar reportes'); return; }
+  const css = `<style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1a1a1a;background:#fff}
+    .page{max-width:210mm;margin:0 auto;padding:12mm 14mm}
+    .hdr{background:#1C1917;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+    .logo{background:#F59E0B;width:34px;height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#1C1917}
+    .app{color:#F59E0B;font-size:17px;font-weight:700} .emp{color:#A8A29E;font-size:9px;margin-top:2px}
+    .rtitle{color:#fff;font-size:13px;font-weight:700;text-align:right} .rsub{color:#A8A29E;font-size:9px;text-align:right;margin-top:2px}
+    .pband{background:#F5F5F4;padding:8px 18px;border-bottom:2px solid #F59E0B;margin-bottom:14px;display:flex;justify-content:space-between}
+    .pnombre{font-size:13px;font-weight:700} .pinfo{font-size:9px;color:#78716C}
+    .sec{margin-bottom:14px} .stitle{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 0;border-bottom:2px solid #F59E0B;margin-bottom:7px}
+    table{width:100%;border-collapse:collapse;font-size:10px}
+    th{background:#1C1917;color:#F59E0B;font-weight:700;padding:5px 7px;text-align:left;font-size:9px}
+    td{padding:4px 7px;border-bottom:1px solid #E7E5E4;vertical-align:top}
+    tr:nth-child(even) td{background:#FAFAF9}
+    .tf td{background:#F59E0B!important;color:#1C1917;font-weight:700}
+    .badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:8px;font-weight:600}
+    .bc{background:#D1FAE5;color:#065F46} .ba{background:#FEF3C7;color:#92400E}
+    .bg{background:#F3F4F6;color:#6B7280} .bb{background:#DBEAFE;color:#1E40AF}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+    .card{border-radius:8px;padding:10px;text-align:center}
+    .cl{font-size:8px;font-weight:600;text-transform:uppercase;opacity:.8;margin-bottom:4px}
+    .cv{font-size:13px;font-weight:700}
+    .cblue{background:#DBEAFE;color:#1E40AF} .camber{background:#FEF3C7;color:#92400E}
+    .cgreen{background:#D1FAE5;color:#065F46} .cred{background:#FEE2E2;color:#DC2626}
+    .fh{background:#F5F5F4;padding:5px 9px;margin:5px 0 2px;border-left:3px solid #F59E0B;font-weight:700;font-size:10px;display:flex;justify-content:space-between}
+    .fc{border-color:#10B981} .fa{border-color:#F59E0B} .fp{border-color:#D1D5DB}
+    .foot{margin-top:18px;padding-top:7px;border-top:1px solid #E7E5E4;display:flex;justify-content:space-between;color:#A8A29E;font-size:8px}
+    .tr{text-align:right} .tc{text-align:center} .bold{font-weight:700}
+    .green{color:#065F46} .red{color:#DC2626}
+    .pbtn{position:fixed;top:14px;right:14px;background:#F59E0B;color:#1C1917;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
+    @media print{.pbtn{display:none} body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style>`;
+  win.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>'+titulo+'</title>'+css+'</head><body><button class="pbtn" onclick="window.print()">🖨️ Guardar PDF</button>'+html+'</body></html>');
+  win.document.close();
 }
 
-function pdfFooter(doc) {
-  const pages = doc.getNumberOfPages();
-  for (let i = 1; i <= pages; i++) {
-    doc.setPage(i);
-    doc.setFillColor(245,245,244);
-    doc.rect(0, 285, 210, 12, 'F');
-    doc.setFontSize(7); doc.setFont('helvetica','normal');
-    doc.setTextColor(120,120,120);
-    doc.text('Edifika — Sistema de gestión de proyectos de construcción  |  edifika-delta.vercel.app', 12, 292);
-    doc.text(`Pág. ${i} / ${pages}`, 210-12, 292, {align:'right'});
-  }
-}
+function M(n){return '$'+(+n||0).toLocaleString('es-EC',{minimumFractionDigits:2});}
+function D(d){return d?new Date(d+'T00:00:00').toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';}
+function B(e){const m={completada:'bc',en_curso:'ba',pendiente:'bg',vendida:'bc',disponible:'bb',reservada:'ba',negociando:'ba',cerrada:'bc',escriturada:'bb'};const l={completada:'Completada',en_curso:'En curso',pendiente:'Pendiente',vendida:'Vendida',disponible:'Disponible',reservada:'Reservada',negociando:'Negociando',cerrada:'Cerrada',escriturada:'Escriturada'};return '<span class="badge '+(m[e]||'bg')+'">'+(l[e]||e)+'</span>';}
+const TL={conjunto:'Conjunto habitacional',casa:'Casa individual',edificio:'Edificio',comercial:'Comercial',mixto:'Mixto',otro:'Otro'};
+const UL={casa:'Casa',departamento:'Depto',duplex:'Dúplex',suite:'Suite',penthouse:'PH',local_comercial:'Local',oficina:'Oficina',parqueadero:'Parqueadero',bodega:'Bodega',otro:'Unidad'};
+const FL={contado:'Contado',credito_directo:'Crédito directo',hipotecario:'Hipotecario'};
 
-function estadoColor(estado) {
-  const m = {
-    completada:[5,150,105], en_curso:[217,119,6], pendiente:[160,160,160],
-    planificacion:[37,99,235], construccion:[217,119,6], terminado:[5,150,105], vendido:[100,100,100],
-    disponible:[37,99,235], reservada:[217,119,6], vendida:[5,150,105], negociando:[217,119,6], cerrada:[5,150,105], escriturada:[37,99,235]
-  };
-  return m[estado] || [100,100,100];
-}
+function HDR(t,s){const p=S.currentProyecto,e=S.empresa;return '<div class="hdr"><div style="display:flex;gap:10px;align-items:center"><div class="logo">E</div><div><div class="app">Edifika</div><div class="emp">'+(e?.nombre||'')+'</div></div></div><div><div class="rtitle">'+t+'</div><div class="rsub">'+(s||'Generado: '+new Date().toLocaleDateString('es-EC'))+'</div></div></div><div class="pband"><div><div class="pnombre">'+(p?.nombre||'')+'</div><div class="pinfo">'+(p?.ubicacion||'')+' '+(p?.tipo?'· '+TL[p.tipo]:'')+'</div></div><div class="pinfo tr">Estado: <strong>'+(p?.estado?.toUpperCase()||'')+'</strong></div></div>';}
+function FTR(){return '<div class="foot"><span>Edifika — gestión de proyectos de construcción</span><span>edifika-delta.vercel.app</span></div>';}
 
-// ── REPORTE 1: FICHA DEL PROYECTO ──
-function reporteFicha() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'mm', format:'a4' });
-  const p = S.currentProyecto;
-  const fases = S.currentFases;
-  const tareas = S.currentTareas;
-  const tipoLabels = {conjunto:'Conjunto habitacional',casa:'Casa individual',edificio:'Edificio',comercial:'Proyecto comercial',mixto:'Proyecto mixto',otro:'Otro'};
-
-  let y = pdfHeader(doc, 'FICHA DEL PROYECTO');
-
-  // Info general
-  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
-  doc.text('INFORMACIÓN GENERAL', 12, y+2);
-  y += 6;
-  const infoData = [
-    ['Tipo de obra', tipoLabels[p.tipo] || p.tipo || '—'],
-    ['Estado', p.estado?.toUpperCase() || '—'],
-    ['Fecha inicio', p.fecha_inicio ? new Date(p.fecha_inicio+'T00:00:00').toLocaleDateString('es-EC') : '—'],
-    ['Fecha entrega', p.fecha_entrega ? new Date(p.fecha_entrega+'T00:00:00').toLocaleDateString('es-EC') : '—'],
-    ['Presupuesto estimado', p.presupuesto ? '$' + (+p.presupuesto).toLocaleString('es-EC',{minimumFractionDigits:2}) : '—'],
-  ];
-  doc.autoTable({
-    startY: y, margin:{left:12,right:12},
-    head: [], body: infoData,
-    styles:{fontSize:9, cellPadding:3},
-    columnStyles:{ 0:{fontStyle:'bold',cellWidth:60,fillColor:[245,245,244]}, 1:{cellWidth:'auto'} },
-    theme:'plain', tableLineColor:[230,229,228], tableLineWidth:0.3
-  });
-  y = doc.lastAutoTable.finalY + 8;
-
-  // Resumen financiero
-  const totalEst = tareas.reduce((a,b)=>a+(+b.costo_estimado||0),0);
-  const totalReal = tareas.reduce((a,b)=>a+(+b.costo_real||0),0);
-  const gastosAd = S.gastos.filter(g=>g.proyecto_id===p.id).reduce((a,b)=>a + (+b.monto),0);
-  const totalInv = totalReal + gastosAd;
-  const pct = p.presupuesto>0 ? Math.min((totalInv/p.presupuesto)*100,100).toFixed(1) : '—';
-
-  doc.setFontSize(10); doc.setFont('helvetica','bold');
-  doc.text('RESUMEN FINANCIERO', 12, y);
-  y += 4;
-  doc.autoTable({
-    startY: y, margin:{left:12,right:12},
-    head:[['Concepto','Monto']],
-    body:[
-      ['Costo estimado (tareas)', '$'+totalEst.toLocaleString('es-EC',{minimumFractionDigits:2})],
-      ['Costo real ejecutado', '$'+totalReal.toLocaleString('es-EC',{minimumFractionDigits:2})],
-      ['Gastos adicionales', '$'+gastosAd.toLocaleString('es-EC',{minimumFractionDigits:2})],
-      ['TOTAL INVERTIDO', '$'+totalInv.toLocaleString('es-EC',{minimumFractionDigits:2})],
-      ['Presupuesto', p.presupuesto?'$'+(+p.presupuesto).toLocaleString('es-EC',{minimumFractionDigits:2}):'—'],
-      ['Ejecución presupuestal', pct+'%'],
-    ],
-    styles:{fontSize:9},
-    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
-    bodyStyles:{},
-    alternateRowStyles:{fillColor:[249,250,251]},
-    columnStyles:{0:{fontStyle:'bold'},1:{halign:'right'}},
-    theme:'striped', margin:{left:12,right:12}
-  });
-  y = doc.lastAutoTable.finalY + 8;
-
-  // Fases y tareas
-  if (fases && fases.length) {
-    if (y > 230) { doc.addPage(); y = 20; }
-    doc.setFontSize(10); doc.setFont('helvetica','bold');
-    doc.text('FASES Y TAREAS', 12, y);
-    y += 4;
-
-    fases.forEach(f => {
-      const tareasF = tareas.filter(t=>t.fase_id===f.id);
-      const estF = tareasF.reduce((a,b)=>a+(+b.costo_estimado||0),0);
-      const realF = tareasF.reduce((a,b)=>a+(+b.costo_real||0),0);
-      const [r,g,b2] = estadoColor(f.estado);
-
-      if (y > 250) { doc.addPage(); y = 20; }
-
-      // Fase header
-      doc.setFillColor(r,g,b2);
-      doc.rect(12, y, 3, 7, 'F');
-      doc.setFillColor(248,247,246);
-      doc.rect(15, y, 183, 7, 'F');
-      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
-      doc.text(f.nombre, 18, y+5);
-      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,100,100);
-      doc.text(f.estado.replace('_',' ').toUpperCase(), 140, y+5);
-      if (estF>0||realF>0) doc.text('Est: $'+estF.toLocaleString('es-EC',{minimumFractionDigits:0})+'  Real: $'+realF.toLocaleString('es-EC',{minimumFractionDigits:0}), 175, y+5, {align:'right'});
-      y += 9;
-
-      if (tareasF.length) {
-        doc.autoTable({
-          startY: y, margin:{left:18,right:12},
-          head:[['Tarea','Estado','Est. $','Real $']],
-          body: tareasF.map(t=>[
-            t.nombre + (t.descripcion ? '\n'+t.descripcion : ''),
-            t.estado.replace('_',' '),
-            t.costo_estimado?'$'+(+t.costo_estimado).toLocaleString('es-EC',{minimumFractionDigits:0}):'—',
-            t.costo_real?'$'+(+t.costo_real).toLocaleString('es-EC',{minimumFractionDigits:0}):'—'
-          ]),
-          styles:{fontSize:8, cellPadding:2.5},
-          headStyles:{fillColor:[40,40,40],textColor:255,fontSize:7.5},
-          columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:28,halign:'center'},2:{cellWidth:25,halign:'right'},3:{cellWidth:25,halign:'right'}},
-          alternateRowStyles:{fillColor:[252,252,252]},
-          theme:'striped', margin:{left:18,right:12}
-        });
-        y = doc.lastAutoTable.finalY + 4;
-      } else {
-        doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','italic');
-        doc.text('Sin tareas registradas', 22, y+4);
-        y += 8;
-      }
+function reporteFicha(){
+  const p=S.currentProyecto; if(!p){toast('Abre un proyecto primero');return;}
+  const fa=S.currentFases||[],ta=S.currentTareas||[];
+  const tE=ta.reduce((a,b)=>a+(+b.costo_estimado||0),0);
+  const tR=ta.reduce((a,b)=>a+(+b.costo_real||0),0);
+  const gA=S.gastos.filter(g=>g.proyecto_id===p.id).reduce((a,b)=>a+(+b.monto||0),0);
+  const tI=tR+gA; const bal=p.presupuesto?(+p.presupuesto)-tI:null;
+  let h=HDR('FICHA DEL PROYECTO')+'<div class="page">';
+  h+='<div class="sec"><div class="stitle">Información General</div><table>';
+  h+='<tr><td class="bold" style="width:120px">Fecha inicio</td><td>'+D(p.fecha_inicio)+'</td><td class="bold" style="width:120px">Fecha entrega</td><td>'+D(p.fecha_entrega)+'</td></tr>';
+  h+='<tr><td class="bold">Presupuesto</td><td>'+( p.presupuesto?M(p.presupuesto):'—')+'</td><td class="bold">Total invertido</td><td class="bold">'+M(tI)+'</td></tr>';
+  h+='<tr><td class="bold">Ejecución</td><td>'+(p.presupuesto?((tI/p.presupuesto)*100).toFixed(1)+'%':'—')+'</td><td class="bold">Balance</td><td class="'+(bal!==null?(bal>=0?'green':'red'):'')+'"><strong>'+(bal!==null?(bal>=0?M(bal)+' disp.':M(Math.abs(bal))+' excedido'):'—')+'</strong></td></tr>';
+  h+='</table></div>';
+  h+='<div class="sec"><div class="stitle">Resumen Financiero</div><table><tr><th>Concepto</th><th class="tr">Estimado</th><th class="tr">Real</th></tr>';
+  h+='<tr><td>Costos de tareas</td><td class="tr">'+M(tE)+'</td><td class="tr">'+M(tR)+'</td></tr>';
+  h+='<tr><td>Gastos adicionales</td><td class="tr">—</td><td class="tr">'+M(gA)+'</td></tr>';
+  h+='<tr class="tf"><td>TOTAL</td><td class="tr">'+M(tE)+'</td><td class="tr">'+M(tI)+'</td></tr></table></div>';
+  if(fa.length){
+    h+='<div class="sec"><div class="stitle">Fases y Tareas</div>';
+    fa.forEach(f=>{
+      const tF=ta.filter(t=>t.fase_id===f.id);
+      const eF=tF.reduce((a,b)=>a+(+b.costo_estimado||0),0);
+      const rF=tF.reduce((a,b)=>a+(+b.costo_real||0),0);
+      h+='<div class="fh f'+(f.estado==='completada'?'c':f.estado==='en_curso'?'a':'p')+'"><span>'+f.nombre+'</span><span>'+B(f.estado)+(eF>0||rF>0?' &nbsp;Est:'+M(eF)+' / Real:'+M(rF):'')+'</span></div>';
+      if(tF.length){
+        h+='<table><tr><th>Tarea</th><th>Estado</th><th class="tr">Estimado</th><th class="tr">Real</th></tr>';
+        tF.forEach(t=>{h+='<tr><td>'+t.nombre+(t.descripcion?'<br><span style="color:#78716C;font-size:9px">'+t.descripcion+'</span>':'')+'</td><td class="tc">'+B(t.estado)+'</td><td class="tr">'+(t.costo_estimado?M(t.costo_estimado):'—')+'</td><td class="tr">'+(t.costo_real?M(t.costo_real):'—')+'</td></tr>';});
+        h+='</table>';
+      }else h+='<p style="color:#A8A29E;font-size:9px;padding:3px 9px;font-style:italic">Sin tareas</p>';
     });
+    h+='</div>';
   }
-
-  pdfFooter(doc);
-  doc.save(p.nombre.replace(/\s+/g,'_') + '_ficha.pdf');
-  toast('PDF generado ✓');
+  h+=FTR()+'</div>';
+  abrirReporte(h,'Ficha — '+p.nombre);
 }
 
-// ── REPORTE 2: ESTADO FINANCIERO ──
-function reporteFinanciero() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'mm', format:'a4' });
-  const p = S.currentProyecto;
-  const tareas = S.currentTareas;
-  const gastosP = S.gastos.filter(g=>g.proyecto_id===p.id);
-  const ventasP = S.ventas.filter(v=>v.proyecto_id===p.id);
-
-  let y = pdfHeader(doc, 'ESTADO FINANCIERO');
-
-  // Resumen ejecutivo
-  const totalEst = tareas.reduce((a,b)=>a+(+b.costo_estimado||0),0);
-  const totalReal = tareas.reduce((a,b)=>a+(+b.costo_real||0),0);
-  const gastosAd = gastosP.reduce((a,b)=>a + (+b.monto),0);
-  const totalInv = totalReal+gastosAd;
-  const ingresos = ventasP.filter(v=>v.estado!=='negociando').reduce((a,b)=>a + (+b.precio),0);
-  const utilidad = ingresos - totalInv;
-
-  // Tarjetas resumen
-  const cards = [
-    {label:'PRESUPUESTO', val:p.presupuesto?'$'+(+p.presupuesto).toLocaleString('es-EC',{minimumFractionDigits:2}):'—', color:[37,99,235]},
-    {label:'TOTAL INVERTIDO', val:'$'+totalInv.toLocaleString('es-EC',{minimumFractionDigits:2}), color:[217,119,6]},
-    {label:'INGRESOS', val:'$'+ingresos.toLocaleString('es-EC',{minimumFractionDigits:2}), color:[5,150,105]},
-    {label:'UTILIDAD', val:(utilidad>=0?'+':'')+' $'+Math.abs(utilidad).toLocaleString('es-EC',{minimumFractionDigits:2}), color:utilidad>=0?[5,150,105]:[220,38,38]},
-  ];
-  const cardW=44, cardH=18, cardX=12, cardGap=2;
-  cards.forEach((c,i) => {
-    const x = cardX + i*(cardW+cardGap);
-    doc.setFillColor(...c.color);
-    doc.roundedRect(x, y, cardW, cardH, 2, 2, 'F');
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(7); doc.setFont('helvetica','normal');
-    doc.text(c.label, x+cardW/2, y+5.5, {align:'center'});
-    doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text(c.val, x+cardW/2, y+13, {align:'center'});
-  });
-  y += cardH + 10;
-
-  // Desglose por categoría
-  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
-  doc.text('GASTOS POR CATEGORÍA', 12, y);
-  y += 4;
-  const catLabels = {materiales:'🧱 Materiales',mano_obra:'👷 Mano de obra',permisos:'📋 Permisos',transporte:'🚛 Transporte',imprevistos:'⚠️ Imprevistos',otros:'📦 Otros'};
-  const porCat = {};
-  gastosP.forEach(g => { porCat[g.categoria]=(porCat[g.categoria]||0)+(+g.monto); });
-  const catBody = Object.entries(porCat).map(([k,v])=>[catLabels[k]||k,'$'+v.toLocaleString('es-EC',{minimumFractionDigits:2}),((v/gastosAd)*100).toFixed(1)+'%']);
-  catBody.push(['TOTAL GASTOS ADICIONALES','$'+gastosAd.toLocaleString('es-EC',{minimumFractionDigits:2}),'100%']);
-  doc.autoTable({
-    startY:y, margin:{left:12,right:12},
-    head:[['Categoría','Monto','% del total']],
-    body: catBody,
-    styles:{fontSize:9},
-    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
-    columnStyles:{1:{halign:'right'},2:{halign:'right',cellWidth:25}},
-    alternateRowStyles:{fillColor:[249,250,251]},
-    theme:'striped'
-  });
-  y = doc.lastAutoTable.finalY + 8;
-
-  // Tareas por estado
-  const estados = {completada:0, en_curso:0, pendiente:0};
-  tareas.forEach(t=>{ if(estados[t.estado]!==undefined) estados[t.estado]++; });
-  doc.setFontSize(10); doc.setFont('helvetica','bold');
-  doc.text('AVANCE DE TAREAS', 12, y);
-  y += 4;
-  doc.autoTable({
-    startY:y, margin:{left:12,right:12},
-    head:[['Estado','Cantidad','Costo estimado','Costo real']],
-    body:[
-      ['✅ Completadas', tareas.filter(t=>t.estado==='completada').length,
-        '$'+tareas.filter(t=>t.estado==='completada').reduce((a,b)=>a+(+b.costo_estimado||0),0).toLocaleString('es-EC',{minimumFractionDigits:2}),
-        '$'+tareas.filter(t=>t.estado==='completada').reduce((a,b)=>a+(+b.costo_real||0),0).toLocaleString('es-EC',{minimumFractionDigits:2})],
-      ['🔨 En curso', tareas.filter(t=>t.estado==='en_curso').length,
-        '$'+tareas.filter(t=>t.estado==='en_curso').reduce((a,b)=>a+(+b.costo_estimado||0),0).toLocaleString('es-EC',{minimumFractionDigits:2}),'—'],
-      ['⏸ Pendientes', tareas.filter(t=>t.estado==='pendiente').length,
-        '$'+tareas.filter(t=>t.estado==='pendiente').reduce((a,b)=>a+(+b.costo_estimado||0),0).toLocaleString('es-EC',{minimumFractionDigits:2}),'—'],
-      ['TOTAL', tareas.length,
-        '$'+totalEst.toLocaleString('es-EC',{minimumFractionDigits:2}),
-        '$'+totalReal.toLocaleString('es-EC',{minimumFractionDigits:2})],
-    ],
-    styles:{fontSize:9},
-    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
-    columnStyles:{1:{halign:'center'},2:{halign:'right'},3:{halign:'right'}},
-    alternateRowStyles:{fillColor:[249,250,251]},
-    theme:'striped'
-  });
-
-  pdfFooter(doc);
-  doc.save(p.nombre.replace(/\s+/g,'_')+'_financiero.pdf');
-  toast('PDF generado ✓');
+function reporteFinanciero(){
+  const p=S.currentProyecto; if(!p){toast('Abre un proyecto primero');return;}
+  const ta=S.currentTareas||[];
+  const gP=S.gastos.filter(g=>g.proyecto_id===p.id);
+  const vP=S.ventas.filter(v=>v.proyecto_id===p.id);
+  const CL={materiales:'🧱 Materiales',mano_obra:'👷 Mano de obra',permisos:'📋 Permisos',transporte:'🚛 Transporte',imprevistos:'⚠️ Imprevistos',otros:'📦 Otros'};
+  const tE=ta.reduce((a,b)=>a+(+b.costo_estimado||0),0);
+  const tR=ta.reduce((a,b)=>a+(+b.costo_real||0),0);
+  const gA=gP.reduce((a,b)=>a+(+b.monto||0),0);
+  const tI=tR+gA;
+  const ing=vP.filter(v=>v.estado!=='negociando').reduce((a,b)=>a+(+b.precio||0),0);
+  const util=ing-tI;
+  let h=HDR('ESTADO FINANCIERO')+'<div class="page">';
+  h+='<div class="cards"><div class="card camber"><div class="cl">Presupuesto</div><div class="cv">'+(p.presupuesto?M(p.presupuesto):'—')+'</div></div>';
+  h+='<div class="card camber"><div class="cl">Total invertido</div><div class="cv">'+M(tI)+'</div></div>';
+  h+='<div class="card cgreen"><div class="cl">Ingresos</div><div class="cv">'+M(ing)+'</div></div>';
+  h+='<div class="card '+(util>=0?'cgreen':'cred')+'"><div class="cl">Utilidad</div><div class="cv">'+(util>=0?'+':'')+M(Math.abs(util))+'</div></div></div>';
+  const pC={};
+  gP.forEach(g=>{pC[g.categoria]=(pC[g.categoria]||0)+(+g.monto||0);});
+  h+='<div class="sec"><div class="stitle">Gastos por Categoría</div><table><tr><th>Categoría</th><th class="tr">Monto</th><th class="tr">%</th></tr>';
+  Object.entries(pC).forEach(([k,v])=>{h+='<tr><td>'+(CL[k]||k)+'</td><td class="tr">'+M(v)+'</td><td class="tr">'+(gA>0?((v/gA)*100).toFixed(1)+'%':'—')+'</td></tr>';});
+  h+='<tr class="tf"><td>TOTAL</td><td class="tr">'+M(gA)+'</td><td class="tr">100%</td></tr></table></div>';
+  const GR=[{e:'completada',l:'✅ Completadas'},{e:'en_curso',l:'🔨 En curso'},{e:'pendiente',l:'⏸ Pendientes'}];
+  h+='<div class="sec"><div class="stitle">Avance de Tareas</div><table><tr><th>Estado</th><th class="tc">Cant.</th><th class="tr">Estimado</th><th class="tr">Real</th></tr>';
+  GR.forEach(({e,l})=>{const g2=ta.filter(t=>t.estado===e);h+='<tr><td>'+l+'</td><td class="tc">'+g2.length+'</td><td class="tr">'+M(g2.reduce((a,b)=>a+(+b.costo_estimado||0),0))+'</td><td class="tr">'+(e==='completada'?M(g2.reduce((a,b)=>a+(+b.costo_real||0),0)):'—')+'</td></tr>';});
+  h+='<tr class="tf"><td>TOTAL ('+ta.length+')</td><td class="tc">'+ta.length+'</td><td class="tr">'+M(tE)+'</td><td class="tr">'+M(tR)+'</td></tr></table></div>';
+  h+=FTR()+'</div>';
+  abrirReporte(h,'Estado Financiero — '+p.nombre);
 }
 
-// ── REPORTE 3: LIBRO DE GASTOS ──
-function reporteGastos() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'landscape' });
-  const p = S.currentProyecto;
-  const gastosP = S.gastos.filter(g=>g.proyecto_id===p.id).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-  const catLabels = {materiales:'Materiales',mano_obra:'Mano de obra',permisos:'Permisos',transporte:'Transporte',imprevistos:'Imprevistos',otros:'Otros'};
-
-  let y = pdfHeader(doc, 'LIBRO DE GASTOS', 'Para uso contable y tributario');
-  // Fix header width for landscape
-  doc.setFillColor(28,25,23);
-  doc.rect(0,0,297,32,'F');
-
-  const totalMonto = gastosP.reduce((a,b)=>a + (+b.monto),0);
-  const totalSubtotal = gastosP.reduce((a,b)=>a+(+b.subtotal_factura||0),0);
-  const totalIVA = gastosP.reduce((a,b)=>a+((+b.subtotal_factura||0)*(+b.iva_pct||15)/100),0);
-  const sinFactura = gastosP.filter(g=>!g.numero_factura).length;
-
-  // Summary
-  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
-  doc.text(`Total gastos: ${gastosP.length}  |  Sin factura: ${sinFactura}  |  Total IVA pagado: $${totalIVA.toLocaleString('es-EC',{minimumFractionDigits:2})}  |  Total: $${totalMonto.toLocaleString('es-EC',{minimumFractionDigits:2})}`, 12, y);
-  y += 6;
-
-  doc.autoTable({
-    startY: y, margin:{left:10,right:10},
-    head:[['Fecha','Descripción','Categoría','N° Factura','RUC Emisor','Razón Social','Subtotal','IVA%','IVA $','Total']],
-    body: gastosP.map(g=>{
-      const iva = (+g.subtotal_factura||0)*(+g.iva_pct||15)/100;
-      return [
-        g.fecha ? new Date(g.fecha+'T00:00:00').toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—',
-        g.descripcion || '—',
-        catLabels[g.categoria]||g.categoria||'—',
-        g.numero_factura || '—',
-        g.ruc_emisor || '—',
-        g.razon_social_emisor || '—',
-        g.subtotal_factura ? '$'+(+g.subtotal_factura).toLocaleString('es-EC',{minimumFractionDigits:2}) : '—',
-        g.iva_pct ? g.iva_pct+'%' : '15%',
-        g.subtotal_factura ? '$'+iva.toLocaleString('es-EC',{minimumFractionDigits:2}) : '—',
-        '$'+(+g.monto).toLocaleString('es-EC',{minimumFractionDigits:2})
-      ];
-    }),
-    foot:[[' ',' ',' ',' ',' ','TOTALES','$'+totalSubtotal.toLocaleString('es-EC',{minimumFractionDigits:2}),' ','$'+totalIVA.toLocaleString('es-EC',{minimumFractionDigits:2}),'$'+totalMonto.toLocaleString('es-EC',{minimumFractionDigits:2})]],
-    styles:{fontSize:7.5, cellPadding:2},
-    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold',fontSize:7},
-    footStyles:{fillColor:[245,158,11],textColor:[28,25,23],fontStyle:'bold'},
-    alternateRowStyles:{fillColor:[249,250,251]},
-    columnStyles:{0:{cellWidth:20},1:{cellWidth:42},2:{cellWidth:20},3:{cellWidth:28},4:{cellWidth:25},5:{cellWidth:38},6:{halign:'right',cellWidth:20},7:{halign:'center',cellWidth:12},8:{halign:'right',cellWidth:18},9:{halign:'right',cellWidth:20}},
-    theme:'striped'
+function reporteGastos(){
+  const p=S.currentProyecto; if(!p){toast('Abre un proyecto primero');return;}
+  const gP=S.gastos.filter(g=>g.proyecto_id===p.id).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  const CL={materiales:'Materiales',mano_obra:'Mano de obra',permisos:'Permisos',transporte:'Transporte',imprevistos:'Imprevistos',otros:'Otros'};
+  const tM=gP.reduce((a,b)=>a+(+b.monto||0),0);
+  const tS=gP.reduce((a,b)=>a+(+b.subtotal_factura||0),0);
+  const tIV=gP.reduce((a,b)=>a+((+b.subtotal_factura||0)*(+b.iva_pct||15)/100),0);
+  const sF=gP.filter(g=>!g.numero_factura).length;
+  let h=HDR('LIBRO DE GASTOS','Para uso contable y tributario')+'<div class="page">';
+  h+='<div class="cards" style="grid-template-columns:repeat(3,1fr)">';
+  h+='<div class="card camber"><div class="cl">Total gastos</div><div class="cv">'+M(tM)+'</div></div>';
+  h+='<div class="card cblue"><div class="cl">Total IVA pagado</div><div class="cv">'+M(tIV)+'</div></div>';
+  h+='<div class="card '+(sF>0?'cred':'cgreen')+'"><div class="cl">Sin factura</div><div class="cv">'+sF+'</div></div></div>';
+  h+='<div class="sec"><div class="stitle">Detalle de Gastos y Facturas</div>';
+  h+='<table style="font-size:9px"><tr><th>Fecha</th><th>Descripción</th><th>Cat.</th><th>N° Factura</th><th>RUC</th><th>Razón Social</th><th class="tr">Subtotal</th><th class="tr">IVA</th><th class="tr">Total</th></tr>';
+  gP.forEach(g=>{
+    const iv=(+g.subtotal_factura||0)*(+g.iva_pct||15)/100;
+    h+='<tr '+(g.numero_factura?'':'style="color:#DC2626"')+'><td style="white-space:nowrap">'+D(g.fecha)+'</td><td>'+( g.descripcion||'—')+'</td><td>'+(CL[g.categoria]||'—')+'</td><td style="font-size:8px">'+(g.numero_factura||'<em>Sin factura</em>')+'</td><td style="font-size:8px">'+(g.ruc_emisor||'—')+'</td><td style="font-size:8px">'+(g.razon_social_emisor||'—')+'</td><td class="tr">'+(g.subtotal_factura?M(g.subtotal_factura):'—')+'</td><td class="tr">'+(g.subtotal_factura?M(iv):'—')+'</td><td class="tr bold">'+M(g.monto)+'</td></tr>';
   });
-
-  pdfFooter(doc);
-  doc.save(p.nombre.replace(/\s+/g,'_')+'_gastos.pdf');
-  toast('PDF generado ✓');
+  h+='<tr class="tf"><td colspan="6" class="bold">TOTALES ('+gP.length+' registros)</td><td class="tr">'+M(tS)+'</td><td class="tr">'+M(tIV)+'</td><td class="tr">'+M(tM)+'</td></tr></table></div>';
+  if(sF>0) h+='<p style="color:#DC2626;font-size:9px;margin-top:6px">⚠️ '+sF+' gasto(s) sin factura no son deducibles tributariamente.</p>';
+  h+=FTR()+'</div>';
+  abrirReporte(h,'Libro de Gastos — '+p.nombre);
 }
 
-// ── REPORTE 4: REPORTE DE VENTAS ──
-function reporteVentas() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'mm', format:'a4' });
-  const p = S.currentProyecto;
-  const unidades = S.currentUnidades;
-  const ventasP = S.ventas.filter(v=>v.proyecto_id===p.id);
-  const tipoLabels = {casa:'Casa',departamento:'Departamento',duplex:'Dúplex',suite:'Suite',penthouse:'PH',local_comercial:'Local comercial',oficina:'Oficina',parqueadero:'Parqueadero',bodega:'Bodega',otro:'Unidad'};
-  const formaLabels = {contado:'Contado',credito_directo:'Crédito directo',hipotecario:'Hipotecario'};
-  const estadoVLabels = {negociando:'Negociando',cerrada:'Cerrada',escriturada:'Escriturada'};
-
-  let y = pdfHeader(doc, 'REPORTE DE VENTAS');
-
-  // Resumen unidades
-  const disp = unidades.filter(u=>u.estado==='disponible').length;
-  const res = unidades.filter(u=>u.estado==='reservada').length;
-  const vend = unidades.filter(u=>u.estado==='vendida').length;
-  const totalIngresos = ventasP.filter(v=>v.estado!=='negociando').reduce((a,b)=>a + (+b.precio),0);
-  const potencial = unidades.filter(u=>u.estado==='disponible').reduce((a,b)=>a+(+b.precio_base||0),0);
-
-  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
-  doc.text('RESUMEN DE UNIDADES', 12, y);
-  y += 4;
-  doc.autoTable({
-    startY:y, margin:{left:12,right:12},
-    head:[['Estado','Cantidad','%']],
-    body:[
-      ['🔵 Disponibles', disp, unidades.length?((disp/unidades.length)*100).toFixed(0)+'%':'—'],
-      ['🟡 Reservadas', res, unidades.length?((res/unidades.length)*100).toFixed(0)+'%':'—'],
-      ['🟢 Vendidas', vend, unidades.length?((vend/unidades.length)*100).toFixed(0)+'%':'—'],
-      ['TOTAL', unidades.length, '100%'],
-    ],
-    styles:{fontSize:9},
-    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
-    columnStyles:{1:{halign:'center'},2:{halign:'center'}},
-    alternateRowStyles:{fillColor:[249,250,251]},
-    theme:'striped'
-  });
-  y = doc.lastAutoTable.finalY + 6;
-
-  // Resumen financiero ventas
-  doc.autoTable({
-    startY:y, margin:{left:12,right:12},
-    head:[['Ingresos confirmados','Potencial restante','Total potencial']],
-    body:[['$'+totalIngresos.toLocaleString('es-EC',{minimumFractionDigits:2}),'$'+potencial.toLocaleString('es-EC',{minimumFractionDigits:2}),'$'+(totalIngresos+potencial).toLocaleString('es-EC',{minimumFractionDigits:2})]],
-    styles:{fontSize:10,fontStyle:'bold',halign:'center'},
-    headStyles:{fillColor:[5,96,70],textColor:255,fontStyle:'bold',halign:'center'},
-    theme:'plain'
-  });
-  y = doc.lastAutoTable.finalY + 8;
-
-  // Detalle de ventas
-  if (ventasP.length) {
-    doc.setFontSize(10); doc.setFont('helvetica','bold');
-    doc.text('DETALLE DE VENTAS', 12, y);
-    y += 4;
-    doc.autoTable({
-      startY:y, margin:{left:12,right:12},
-      head:[['Unidad','Comprador','Cédula','Teléfono','Precio','Forma de pago','Estado','Fecha']],
-      body: ventasP.map(v=>{
-        const u = unidades.find(x=>x.id===v.unidad_id);
-        return [
-          u ? (tipoLabels[u.tipo]||u.tipo)+' '+u.identificador : '—',
-          v.comprador_nombre||'—',
-          v.comprador_cedula||'—',
-          v.comprador_telefono||'—',
-          '$'+(+v.precio).toLocaleString('es-EC',{minimumFractionDigits:2}),
-          formaLabels[v.forma_pago]||v.forma_pago||'—',
-          estadoVLabels[v.estado]||v.estado||'—',
-          v.fecha_cierre?new Date(v.fecha_cierre+'T00:00:00').toLocaleDateString('es-EC'):'—'
-        ];
-      }),
-      styles:{fontSize:8, cellPadding:2.5},
-      headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold',fontSize:7.5},
-      alternateRowStyles:{fillColor:[249,250,251]},
-      columnStyles:{4:{halign:'right'},6:{halign:'center'},7:{halign:'center'}},
-      theme:'striped'
-    });
-    y = doc.lastAutoTable.finalY + 8;
+function reporteVentas(){
+  const p=S.currentProyecto; if(!p){toast('Abre un proyecto primero');return;}
+  const un=S.currentUnidades||[];
+  const vP=S.ventas.filter(v=>v.proyecto_id===p.id);
+  const dsp=un.filter(u=>u.estado==='disponible').length;
+  const res=un.filter(u=>u.estado==='reservada').length;
+  const vnd=un.filter(u=>u.estado==='vendida').length;
+  const ing=vP.filter(v=>v.estado!=='negociando').reduce((a,b)=>a+(+b.precio||0),0);
+  const pot=un.filter(u=>u.estado==='disponible').reduce((a,b)=>a+(+b.precio_base||0),0);
+  let h=HDR('REPORTE DE VENTAS')+'<div class="page">';
+  h+='<div class="cards"><div class="card cblue"><div class="cl">Disponibles</div><div class="cv">'+dsp+'</div></div>';
+  h+='<div class="card camber"><div class="cl">Reservadas</div><div class="cv">'+res+'</div></div>';
+  h+='<div class="card cgreen"><div class="cl">Vendidas</div><div class="cv">'+vnd+'</div></div>';
+  h+='<div class="card cgreen"><div class="cl">Ingresos</div><div class="cv" style="font-size:10px">'+M(ing)+'</div></div></div>';
+  if(vP.length){
+    h+='<div class="sec"><div class="stitle">Detalle de Ventas</div><table><tr><th>Unidad</th><th>Comprador</th><th>Cédula</th><th>Teléfono</th><th class="tr">Precio</th><th>Pago</th><th>Estado</th><th>Fecha</th></tr>';
+    vP.forEach(v=>{const u=un.find(x=>x.id===v.unidad_id);h+='<tr><td>'+(u?(UL[u.tipo]||u.tipo)+' '+u.identificador:'—')+'</td><td class="bold">'+(v.comprador_nombre||'—')+'</td><td>'+(v.comprador_cedula||'—')+'</td><td>'+(v.comprador_telefono||'—')+'</td><td class="tr bold">'+M(v.precio)+'</td><td>'+(FL[v.forma_pago]||v.forma_pago||'—')+'</td><td>'+B(v.estado)+'</td><td>'+D(v.fecha_cierre)+'</td></tr>';});
+    h+='<tr class="tf"><td colspan="4">TOTAL INGRESOS CONFIRMADOS</td><td class="tr">'+M(ing)+'</td><td colspan="3"></td></tr></table></div>';
   }
-
-  // Todas las unidades
-  doc.setFontSize(10); doc.setFont('helvetica','bold');
-  doc.text('ESTADO DE TODAS LAS UNIDADES', 12, y);
-  y += 4;
-  doc.autoTable({
-    startY:y, margin:{left:12,right:12},
-    head:[['Unidad','Tipo','Área m²','Precio base','Estado','Notas']],
-    body: unidades.map(u=>[
-      u.identificador,
-      tipoLabels[u.tipo]||u.tipo,
-      u.area_m2?u.area_m2+' m²':'—',
-      u.precio_base?'$'+(+u.precio_base).toLocaleString('es-EC',{minimumFractionDigits:2}):'—',
-      u.estado?.toUpperCase()||'—',
-      u.notas||'—'
-    ]),
-    styles:{fontSize:8, cellPadding:2.5},
-    headStyles:{fillColor:[28,25,23],textColor:[245,158,11],fontStyle:'bold'},
-    alternateRowStyles:{fillColor:[249,250,251]},
-    theme:'striped'
-  });
-
-  pdfFooter(doc);
-  doc.save(p.nombre.replace(/\s+/g,'_')+'_ventas.pdf');
-  toast('PDF generado ✓');
+  h+='<div class="sec"><div class="stitle">Estado de Todas las Unidades</div><table><tr><th>Unidad</th><th>Tipo</th><th class="tr">Precio base</th><th>Estado</th><th>Notas</th></tr>';
+  un.forEach(u=>{h+='<tr><td class="bold">'+u.identificador+'</td><td>'+(UL[u.tipo]||u.tipo)+'</td><td class="tr">'+(u.precio_base?M(u.precio_base):'—')+'</td><td>'+B(u.estado)+'</td><td style="font-size:9px;color:#78716C">'+(u.notas||'—')+'</td></tr>';});
+  h+='<tr class="tf"><td colspan="2">POTENCIAL RESTANTE</td><td class="tr">'+M(pot)+'</td><td colspan="2"></td></tr></table></div>';
+  h+=FTR()+'</div>';
+  abrirReporte(h,'Reporte de Ventas — '+p.nombre);
 }
 
 </script>
