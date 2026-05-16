@@ -1276,6 +1276,82 @@
   </div>
 </div>
 
+<!-- Modal: Facturas de Tarea -->
+<div class="modal-overlay" id="modal-gastos-tarea">
+  <div class="modal" style="max-height:90vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mgt-title">Facturas de la tarea</div>
+    <input type="hidden" id="mgt-tarea-id">
+    <div id="mgt-lista" style="margin-bottom:14px"></div>
+    <button class="btn btn-primary" onclick="abrirNuevaFacturaTarea()" style="margin-bottom:8px">+ Agregar factura</button>
+    <button class="btn btn-secondary" onclick="closeModal('modal-gastos-tarea')">Cerrar</button>
+  </div>
+</div>
+
+<!-- Modal: Nueva Factura de Tarea -->
+<div class="modal-overlay" id="modal-factura-tarea">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mft-title">Nueva factura</div>
+    <input type="hidden" id="mft-tarea-id">
+    <input type="hidden" id="mft-edit-id">
+    <div class="form-group"><label class="form-label-light">Descripción del gasto *</label>
+      <input type="text" id="mft-desc" class="form-input-light" placeholder="Ej: Compra de bloques para cerramiento"></div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Monto total ($) *</label>
+        <input type="number" id="mft-monto" class="form-input-light" step="0.01" oninput="calcTotalMFT()"></div>
+      <div class="form-group"><label class="form-label-light">Fecha *</label>
+        <input type="date" id="mft-fecha" class="form-input-light"></div>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Categoría</label>
+        <select id="mft-cat" class="form-input-light">
+          <option value="materiales">🧱 Materiales</option>
+          <option value="mano_obra">👷 Mano de obra</option>
+          <option value="permisos">📋 Permisos</option>
+          <option value="transporte">🚛 Transporte</option>
+          <option value="imprevistos">⚠️ Imprevistos</option>
+          <option value="otros">📦 Otros</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label-light">Proveedor</label>
+        <input type="text" id="mft-proveedor" class="form-input-light" placeholder="Nombre del proveedor"></div>
+    </div>
+    <div style="background:var(--s50);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--s600);margin-bottom:8px;text-transform:uppercase;letter-spacing:.3px">Datos de factura</div>
+      <div class="row2">
+        <div class="form-group"><label class="form-label-light">N° Factura</label>
+          <input type="text" id="mft-num-factura" class="form-input-light" placeholder="001-001-000000001"></div>
+        <div class="form-group"><label class="form-label-light">RUC emisor</label>
+          <input type="text" id="mft-ruc" class="form-input-light" placeholder="1001234567001"></div>
+      </div>
+      <div class="form-group"><label class="form-label-light">Razón social</label>
+        <input type="text" id="mft-razon" class="form-input-light" placeholder="Nombre del emisor"></div>
+      <div class="row2">
+        <div class="form-group"><label class="form-label-light">Subtotal ($)</label>
+          <input type="number" id="mft-subtotal" class="form-input-light" step="0.01" oninput="calcTotalMFT()"></div>
+        <div class="form-group"><label class="form-label-light">IVA %</label>
+          <select id="mft-iva" class="form-input-light" onchange="calcTotalMFT()">
+            <option value="0">0%</option>
+            <option value="15" selected>15%</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label-light">Total factura ($)</label>
+        <input type="number" id="mft-total" class="form-input-light" step="0.01" readonly style="background:var(--s100)"></div>
+      <div class="form-group"><label class="form-label-light">📎 Subir factura (imagen/PDF)</label>
+        <input type="file" id="mft-archivo" class="form-input-light" accept="image/*,application/pdf" onchange="seleccionarArchivoMFT(this)">
+        <div id="mft-archivo-nombre" style="font-size:11px;color:var(--green);margin-top:4px"></div>
+      </div>
+    </div>
+    <div id="mft-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-factura-tarea')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-mft" onclick="guardarFacturaTarea()">Guardar factura</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1644,32 +1720,7 @@ async function verProyecto(id) {
         </div>
         <div class="fase-body" id="fb-${fi}">
           ${tareasF.length===0 ? `<div class="fase-hint">Toca "+ Agregar tarea" para detallar los trabajos y costos de esta fase.</div>` : ''}
-          ${tareasF.map((t,ti) => `
-          <div class="tarea-item" data-tarea-id="${t.id}" data-orden="${t.orden||ti}"
-            draggable="true"
-            ondragstart="dragStart(event,'${t.id}','${f.id}')"
-            ondragover="dragOver(event)"
-            ondragleave="dragLeave(event)"
-            ondrop="dragDrop(event,'${f.id}')">
-            <div class="drag-handle" onclick="event.stopPropagation()" title="Arrastra para reordenar">⠿</div>
-            <div class="tarea-check ${t.estado==='completada'?'done':''}"
-              onclick="event.stopPropagation();toggleTarea('${t.id}')"
-              title="${t.estado==='completada'?'Clic para marcar como pendiente':'Clic para marcar como completada'}">
-              ${t.estado==='completada'?'✓':''}
-            </div>
-            <div class="tarea-info">
-              <div class="tarea-nombre ${t.estado==='completada'?'done':''}">${t.nombre}</div>
-              ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:''}
-              <div class="tarea-costos">
-                ${t.costo_estimado?`<span class="tarea-costo-tag tarea-est">📋 Est: ${fmt(t.costo_estimado)}</span>`:''}
-                ${t.costo_real?`<span class="tarea-costo-tag tarea-real">💰 Real: ${fmt(t.costo_real)}</span>`:''}
-                ${!t.costo_estimado&&!t.costo_real?'<span style="font-size:11px;color:var(--s400)">Sin costos — edita para agregar</span>':''}
-              </div>
-            </div>
-            <button onclick="event.stopPropagation();abrirEditarTarea('${t.id}')"
-              style="flex-shrink:0;background:var(--s100);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px;color:var(--s600)"
-              title="Editar tarea">✏️</button>
-          </div>`).join('')}
+          ${tareasF.map((t,ti) => renderTareaItem(t, ti, f.id)).join('')}
           <div class="fase-add-btn" onclick="abrirTarea('${f.id}')">
             <span style="font-size:18px;line-height:1">+</span> Agregar tarea a esta fase
           </div>
@@ -3788,6 +3839,253 @@ async function iniciar() {
     console.error('Error en iniciar():', e);
     toast('Error al cargar la aplicación. Recarga la página.');
   }
+}
+
+
+function renderTareaItem(t, ti, faseId) {
+  const gastosT = S.gastos.filter(g => g.tarea_id === t.id);
+  const totalGastosT = gastosT.reduce((a,b) => a+(+b.monto||0), 0);
+  const costoReal = totalGastosT > 0 ? totalGastosT : (+t.costo_real||0);
+  const nFact = gastosT.length;
+  return `<div class="tarea-item" data-tarea-id="${t.id}" data-orden="${t.orden||ti}"
+    draggable="true"
+    ondragstart="dragStart(event,'${t.id}','${faseId}')"
+    ondragover="dragOver(event)"
+    ondragleave="dragLeave(event)"
+    ondrop="dragDrop(event,'${faseId}')">
+    <div class="drag-handle" onclick="event.stopPropagation()" title="Arrastra para reordenar">⠿</div>
+    <div class="tarea-check ${t.estado==='completada'?'done':''}"
+      onclick="event.stopPropagation();toggleTarea('${t.id}')"
+      title="${t.estado==='completada'?'Clic para pendiente':'Clic para completar'}">
+      ${t.estado==='completada'?'✓':''}
+    </div>
+    <div class="tarea-info" style="flex:1">
+      <div class="tarea-nombre ${t.estado==='completada'?'done':''}">${t.nombre}</div>
+      ${t.descripcion?`<div class="tarea-desc">${t.descripcion}</div>`:''}
+      <div class="tarea-costos">
+        ${t.costo_estimado?`<span class="tarea-costo-tag tarea-est">📋 Est: ${fmt(t.costo_estimado)}</span>`:''}
+        ${costoReal>0?`<span class="tarea-costo-tag tarea-real">💰 Real: ${fmt(costoReal)}</span>`:''}
+        ${nFact>0?`<span style="font-size:11px;color:var(--amber-d);font-weight:600;cursor:pointer" onclick="event.stopPropagation();abrirGastosTarea('${t.id}','${t.nombre.replace(/'/g,'').replace(/"/g,'')}')">🧾 ${nFact} factura${nFact!==1?'s':''}</span>`:''}
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;flex-shrink:0">
+      <button onclick="event.stopPropagation();abrirGastosTarea('${t.id}','${t.nombre.replace(/'/g,'').replace(/"/g,'')}')"
+        style="background:#DBEAFE;color:#1E40AF;border:none;border-radius:8px;padding:6px 9px;cursor:pointer;font-size:12px;font-weight:600"
+        title="Facturas de esta tarea">🧾${nFact>0?' '+nFact:''}</button>
+      <button onclick="event.stopPropagation();abrirEditarTarea('${t.id}')"
+        style="background:var(--s100);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px;color:var(--s600)"
+        title="Editar tarea">✏️</button>
+    </div>
+  </div>`;
+}
+
+// ══ FACTURAS POR TAREA ══
+let archivoMFT = null;
+
+function seleccionarArchivoMFT(input) {
+  archivoMFT = input.files[0] || null;
+  document.getElementById('mft-archivo-nombre').textContent = archivoMFT ? '📎 ' + archivoMFT.name : '';
+}
+
+function calcTotalMFT() {
+  const sub = parseFloat(document.getElementById('mft-subtotal').value) || 0;
+  const iva = parseFloat(document.getElementById('mft-iva').value) || 15;
+  if (sub > 0) {
+    const total = sub * (1 + iva/100);
+    document.getElementById('mft-total').value = total.toFixed(2);
+    document.getElementById('mft-monto').value = total.toFixed(2);
+  }
+}
+
+async function abrirGastosTarea(tareaId, tareaNombre) {
+  document.getElementById('mgt-tarea-id').value = tareaId;
+  document.getElementById('mgt-title').textContent = 'Facturas: ' + (tareaNombre || 'Tarea');
+  await renderGastosTarea(tareaId);
+  openModal('modal-gastos-tarea');
+}
+
+async function renderGastosTarea(tareaId) {
+  const gastosT = S.gastos.filter(g => g.tarea_id === tareaId);
+  const lista = document.getElementById('mgt-lista');
+  if (!gastosT.length) {
+    lista.innerHTML = '<p style="color:var(--s400);font-size:13px;text-align:center;padding:12px 0">Sin facturas registradas. Agrega la primera.</p>';
+    return;
+  }
+  const total = gastosT.reduce((a,b) => a+(+b.monto||0), 0);
+  const totalIVA = gastosT.reduce((a,b) => a+((+b.subtotal_factura||0)*(+b.iva_pct||15)/100), 0);
+  lista.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1;background:#D1FAE5;border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:#065F46;font-weight:600">TOTAL GASTADO</div>
+        <div style="font-size:16px;font-weight:700;color:#065F46">${fmt(total)}</div>
+      </div>
+      <div style="flex:1;background:#DBEAFE;border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:#1E40AF;font-weight:600">IVA PAGADO</div>
+        <div style="font-size:16px;font-weight:700;color:#1E40AF">${fmt(totalIVA)}</div>
+      </div>
+    </div>
+    ${gastosT.map(g => `
+      <div style="border:1px solid var(--s200);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--white)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--dark2)">${g.descripcion}</div>
+            <div style="font-size:11px;color:var(--s400);margin-top:2px">${fdate(g.fecha)}${g.razon_social_emisor?' · '+g.razon_social_emisor:''}</div>
+            ${g.numero_factura?`<div style="font-size:10px;color:var(--s500);margin-top:3px;background:var(--s50);padding:2px 6px;border-radius:4px;display:inline-block">N° ${g.numero_factura} · RUC: ${g.ruc_emisor||'—'}</div>`:''}
+            ${g.subtotal_factura?`<div style="font-size:11px;color:var(--s500);margin-top:4px">Sub: ${fmt(g.subtotal_factura)} + IVA ${g.iva_pct||15}% = ${fmt(g.monto)}</div>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <div style="font-size:15px;font-weight:700;color:var(--dark2)">${fmt(g.monto)}</div>
+            <div style="display:flex;gap:4px">
+              ${g.archivo_url?`<a href="${g.archivo_url}" target="_blank" style="background:#FEF3C7;color:#92400E;border:none;border-radius:6px;padding:3px 7px;font-size:11px;font-weight:600;text-decoration:none">📎</a>`:''}
+              <button onclick="editarFacturaTarea('${g.id}')" style="background:var(--s100);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
+              <button onclick="eliminarFacturaTarea('${g.id}')" style="background:#FEE2E2;border:none;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">🗑️</button>
+            </div>
+          </div>
+        </div>
+      </div>`).join('')}`;
+}
+
+function abrirNuevaFacturaTarea() {
+  const tareaId = document.getElementById('mgt-tarea-id').value;
+  const tarea = S.tareas.find(t => t.id === tareaId);
+  document.getElementById('mft-tarea-id').value = tareaId;
+  document.getElementById('mft-edit-id').value = '';
+  document.getElementById('mft-title').textContent = 'Nueva factura' + (tarea ? ': ' + tarea.nombre : '');
+  document.getElementById('mft-desc').value = '';
+  document.getElementById('mft-monto').value = '';
+  document.getElementById('mft-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mft-cat').value = 'materiales';
+  document.getElementById('mft-proveedor').value = '';
+  document.getElementById('mft-num-factura').value = '';
+  document.getElementById('mft-ruc').value = '';
+  document.getElementById('mft-razon').value = '';
+  document.getElementById('mft-subtotal').value = '';
+  document.getElementById('mft-iva').value = '15';
+  document.getElementById('mft-total').value = '';
+  document.getElementById('mft-archivo-nombre').textContent = '';
+  document.getElementById('mft-error').classList.remove('show');
+  archivoMFT = null;
+  // Keep gastos-tarea modal open in background
+  closeModal('modal-gastos-tarea');
+  openModal('modal-factura-tarea');
+}
+
+function editarFacturaTarea(gastoId) {
+  const g = S.gastos.find(x => x.id === gastoId);
+  if (!g) return;
+  document.getElementById('mft-edit-id').value = g.id;
+  document.getElementById('mft-tarea-id').value = g.tarea_id;
+  document.getElementById('mft-title').textContent = 'Editar factura';
+  document.getElementById('mft-desc').value = g.descripcion || '';
+  document.getElementById('mft-monto').value = g.monto || '';
+  document.getElementById('mft-fecha').value = g.fecha || '';
+  document.getElementById('mft-cat').value = g.categoria || 'materiales';
+  document.getElementById('mft-proveedor').value = g.razon_social_emisor || '';
+  document.getElementById('mft-num-factura').value = g.numero_factura || '';
+  document.getElementById('mft-ruc').value = g.ruc_emisor || '';
+  document.getElementById('mft-razon').value = g.razon_social_emisor || '';
+  document.getElementById('mft-subtotal').value = g.subtotal_factura || '';
+  document.getElementById('mft-iva').value = g.iva_pct || '15';
+  document.getElementById('mft-total').value = g.total_factura || '';
+  document.getElementById('mft-archivo-nombre').textContent = g.archivo_url ? '📎 Factura existente' : '';
+  archivoMFT = null;
+  closeModal('modal-gastos-tarea');
+  openModal('modal-factura-tarea');
+}
+
+async function guardarFacturaTarea() {
+  const tareaId = document.getElementById('mft-tarea-id').value;
+  const editId = document.getElementById('mft-edit-id').value;
+  const desc = document.getElementById('mft-desc').value.trim();
+  const monto = parseFloat(document.getElementById('mft-monto').value);
+  const fecha = document.getElementById('mft-fecha').value;
+  if (!desc || !monto || !fecha) return showErr('mft-error', 'Descripción, monto y fecha son obligatorios');
+
+  const tarea = S.tareas.find(t => t.id === tareaId);
+  setLoading('btn-mft', true);
+  try {
+    const gastoData = {
+      proyecto_id: tarea?.proyecto_id || S.currentProyecto?.id,
+      empresa_id: S.empresa.id,
+      tarea_id: tareaId,
+      descripcion: desc, monto, fecha,
+      categoria: document.getElementById('mft-cat').value,
+      razon_social_emisor: document.getElementById('mft-proveedor').value.trim() || document.getElementById('mft-razon').value.trim() || null,
+      numero_factura: document.getElementById('mft-num-factura').value.trim() || null,
+      ruc_emisor: document.getElementById('mft-ruc').value.trim() || null,
+      subtotal_factura: parseFloat(document.getElementById('mft-subtotal').value) || null,
+      iva_pct: parseFloat(document.getElementById('mft-iva').value) || 15,
+      total_factura: parseFloat(document.getElementById('mft-total').value) || null
+    };
+
+    let gastoId = editId;
+    if (editId) {
+      await dbWrite(db.from('gastos').update(gastoData).eq('id', editId));
+      const idx = S.gastos.findIndex(g => g.id === editId);
+      if (idx >= 0) S.gastos[idx] = { ...S.gastos[idx], ...gastoData };
+    } else {
+      const { data: nuevo, error } = await dbWrite(db.from('gastos').insert(gastoData).select().single());
+      if (error) throw error;
+      gastoId = nuevo.id;
+      S.gastos.push(nuevo);
+    }
+
+    // Upload archivo if selected
+    if (archivoMFT && gastoId) {
+      const ext = archivoMFT.name.split('.').pop();
+      const path = `facturas/${gastoId}.${ext}`;
+      const { data: up } = await db.storage.from('facturas-edifika').upload(path, archivoMFT, { upsert: true });
+      if (up) {
+        const { data: urlData } = db.storage.from('facturas-edifika').getPublicUrl(path);
+        const url = urlData?.publicUrl;
+        await db.from('gastos').update({ archivo_url: url }).eq('id', gastoId);
+        const g2 = S.gastos.find(g => g.id === gastoId);
+        if (g2) g2.archivo_url = url;
+      }
+    }
+
+    // Auto-update tarea costo_real
+    const gastosT = S.gastos.filter(g => g.tarea_id === tareaId);
+    const totalT = gastosT.reduce((a,b) => a+(+b.monto||0), 0);
+    await db.from('tareas').update({ costo_real: totalT }).eq('id', tareaId);
+    const tareaIdx = S.tareas.findIndex(t => t.id === tareaId);
+    if (tareaIdx >= 0) S.tareas[tareaIdx].costo_real = totalT;
+
+    archivoMFT = null;
+    closeModal('modal-factura-tarea');
+    toast(editId ? 'Factura actualizada ✓' : 'Factura guardada ✓');
+
+    // Reopen gastos modal
+    await abrirGastosTarea(tareaId, tarea?.nombre);
+
+    // Refresh project view
+    if (S.currentProyecto) { await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
+    renderDashboard();
+  } catch(e) {
+    console.error(e);
+    showErr('mft-error', e.message || 'Error al guardar la factura');
+  }
+  setLoading('btn-mft', false);
+}
+
+async function eliminarFacturaTarea(gastoId) {
+  if (!confirm('¿Eliminar esta factura?')) return;
+  const g = S.gastos.find(x => x.id === gastoId);
+  await db.from('gastos').delete().eq('id', gastoId);
+  S.gastos = S.gastos.filter(x => x.id !== gastoId);
+
+  // Recalcular costo_real de la tarea
+  if (g?.tarea_id) {
+    const gastosT = S.gastos.filter(x => x.tarea_id === g.tarea_id);
+    const totalT = gastosT.reduce((a,b) => a+(+b.monto||0), 0);
+    await db.from('tareas').update({ costo_real: totalT }).eq('id', g.tarea_id);
+    const ti = S.tareas.findIndex(t => t.id === g.tarea_id);
+    if (ti >= 0) S.tareas[ti].costo_real = totalT;
+    toast('Factura eliminada');
+    await abrirGastosTarea(g.tarea_id);
+  }
+  if (S.currentProyecto) { await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
+  renderDashboard();
 }
 
 </script>
