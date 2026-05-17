@@ -1165,13 +1165,62 @@
     <div style="border:1px solid var(--s200);border-radius:12px;overflow:hidden;margin-bottom:14px">
       <div style="background:var(--s50);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--s200)">
         <div style="font-size:13px;font-weight:600;color:var(--dark2)">🧾 Facturas de esta tarea</div>
-        <span id="et-fact-count" style="font-size:12px;color:var(--s400)"></span>
+        <span id="et-fact-count" style="font-size:12px;color:var(--amber-d);font-weight:600"></span>
       </div>
-      <div id="et-facturas-lista" style="padding:10px 14px;max-height:200px;overflow-y:auto">
+      <div id="et-facturas-lista" style="padding:10px 14px;max-height:220px;overflow-y:auto">
         <p style="font-size:12px;color:var(--s400);text-align:center;padding:8px 0">Sin facturas aún</p>
       </div>
-      <div style="padding:10px 14px;border-top:1px solid var(--s100)">
-        <button onclick="abrirNuevaFacturaDesdeTarea()" class="btn" style="width:100%;background:var(--amber-l);color:var(--amber-d);font-weight:600;border:1px dashed var(--amber)">+ Agregar factura</button>
+      <!-- Formulario inline de factura -->
+      <div id="et-form-factura" style="display:none;border-top:2px solid var(--amber);padding:14px;background:#FFFBEB">
+        <div style="font-size:13px;font-weight:700;color:var(--amber-d);margin-bottom:12px" id="et-form-fact-title">Nueva factura</div>
+        <input type="hidden" id="etf-edit-id">
+        <div class="form-group"><label class="form-label-light">Descripción del gasto *</label>
+          <input type="text" id="etf-desc" class="form-input-light" placeholder="Ej: Compra de bloques"></div>
+        <div class="row2">
+          <div class="form-group"><label class="form-label-light">Monto total ($) *</label>
+            <input type="number" id="etf-monto" class="form-input-light" step="0.01" oninput="calcTotalETF()"></div>
+          <div class="form-group"><label class="form-label-light">Fecha *</label>
+            <input type="date" id="etf-fecha" class="form-input-light"></div>
+        </div>
+        <div class="row2">
+          <div class="form-group"><label class="form-label-light">Categoría</label>
+            <select id="etf-cat" class="form-input-light">
+              <option value="materiales">🧱 Materiales</option>
+              <option value="mano_obra">👷 Mano de obra</option>
+              <option value="permisos">📋 Permisos</option>
+              <option value="transporte">🚛 Transporte</option>
+              <option value="imprevistos">⚠️ Imprevistos</option>
+              <option value="otros">📦 Otros</option>
+            </select></div>
+          <div class="form-group"><label class="form-label-light">N° Factura</label>
+            <input type="text" id="etf-num" class="form-input-light" placeholder="001-001-000000001"></div>
+        </div>
+        <div class="row2">
+          <div class="form-group"><label class="form-label-light">RUC emisor</label>
+            <input type="text" id="etf-ruc" class="form-input-light" placeholder="1001234567001"></div>
+          <div class="form-group"><label class="form-label-light">Razón social</label>
+            <input type="text" id="etf-razon" class="form-input-light" placeholder="Nombre del proveedor"></div>
+        </div>
+        <div class="row2">
+          <div class="form-group"><label class="form-label-light">Subtotal ($)</label>
+            <input type="number" id="etf-subtotal" class="form-input-light" step="0.01" oninput="calcTotalETF()"></div>
+          <div class="form-group"><label class="form-label-light">IVA %</label>
+            <select id="etf-iva" class="form-input-light" onchange="calcTotalETF()">
+              <option value="0">0%</option><option value="15" selected>15%</option>
+            </select></div>
+        </div>
+        <div class="form-group"><label class="form-label-light">📎 Subir factura (imagen o PDF)</label>
+          <input type="file" id="etf-archivo" class="form-input-light" accept="image/*,application/pdf">
+          <div id="etf-archivo-info" style="font-size:11px;color:var(--green);margin-top:3px"></div>
+        </div>
+        <div id="etf-error" class="error-msg"></div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button onclick="cerrarFormFactura()" class="btn btn-secondary" style="flex:1">Cancelar</button>
+          <button onclick="guardarFacturaInline()" class="btn btn-primary" style="flex:1" id="btn-etf">💾 Guardar factura</button>
+        </div>
+      </div>
+      <div id="et-btn-agregar-fact" style="padding:10px 14px;border-top:1px solid var(--s100)">
+        <button onclick="mostrarFormFactura()" class="btn" style="width:100%;background:var(--amber-l);color:var(--amber-d);font-weight:600;border:1px dashed var(--amber)">+ Agregar factura</button>
       </div>
     </div>
 
@@ -4106,6 +4155,139 @@ async function eliminarFacturaTarea(gastoId) {
   }
   if (S.currentProyecto) { await verProyecto(S.currentProyecto.id); restoreOpenFases(); }
   renderDashboard();
+}
+
+
+function calcTotalETF() {
+  const sub = parseFloat(document.getElementById('etf-subtotal').value) || 0;
+  const iva = parseFloat(document.getElementById('etf-iva').value) || 15;
+  if (sub > 0) {
+    const total = sub * (1 + iva/100);
+    document.getElementById('etf-monto').value = total.toFixed(2);
+  }
+}
+
+function mostrarFormFactura(gastoId) {
+  const form = document.getElementById('et-form-factura');
+  const btnAgregar = document.getElementById('et-btn-agregar-fact');
+  form.style.display = 'block';
+  if (btnAgregar) btnAgregar.style.display = 'none';
+  if (!gastoId) {
+    document.getElementById('et-form-fact-title').textContent = 'Nueva factura';
+    document.getElementById('etf-edit-id').value = '';
+    document.getElementById('etf-desc').value = '';
+    document.getElementById('etf-monto').value = '';
+    document.getElementById('etf-fecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('etf-cat').value = 'materiales';
+    document.getElementById('etf-num').value = '';
+    document.getElementById('etf-ruc').value = '';
+    document.getElementById('etf-razon').value = '';
+    document.getElementById('etf-subtotal').value = '';
+    document.getElementById('etf-iva').value = '15';
+    document.getElementById('etf-archivo-info').textContent = '';
+  }
+  // Scroll to form
+  form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function cerrarFormFactura() {
+  document.getElementById('et-form-factura').style.display = 'none';
+  const btnAgregar = document.getElementById('et-btn-agregar-fact');
+  if (btnAgregar) btnAgregar.style.display = 'block';
+}
+
+function editarFacturaInline(gastoId) {
+  const g = S.gastos.find(x => x.id === gastoId);
+  if (!g) return;
+  mostrarFormFactura(gastoId);
+  document.getElementById('et-form-fact-title').textContent = 'Editar factura';
+  document.getElementById('etf-edit-id').value = g.id;
+  document.getElementById('etf-desc').value = g.descripcion || '';
+  document.getElementById('etf-monto').value = g.monto || '';
+  document.getElementById('etf-fecha').value = g.fecha || '';
+  document.getElementById('etf-cat').value = g.categoria || 'materiales';
+  document.getElementById('etf-num').value = g.numero_factura || '';
+  document.getElementById('etf-ruc').value = g.ruc_emisor || '';
+  document.getElementById('etf-razon').value = g.razon_social_emisor || '';
+  document.getElementById('etf-subtotal').value = g.subtotal_factura || '';
+  document.getElementById('etf-iva').value = g.iva_pct || '15';
+  document.getElementById('etf-archivo-info').textContent = g.archivo_url ? '📎 Tiene archivo adjunto' : '';
+}
+
+async function guardarFacturaInline() {
+  const tareaId = document.getElementById('et-id').value;
+  const editId = document.getElementById('etf-edit-id').value;
+  const desc = document.getElementById('etf-desc').value.trim();
+  const monto = parseFloat(document.getElementById('etf-monto').value);
+  const fecha = document.getElementById('etf-fecha').value;
+  if (!desc || !monto || !fecha) {
+    showErr('etf-error', 'Descripción, monto y fecha son obligatorios');
+    return;
+  }
+  const tarea = S.tareas.find(t => t.id === tareaId);
+  setLoading('btn-etf', true);
+  try {
+    const gastoData = {
+      proyecto_id: tarea?.proyecto_id || S.currentProyecto?.id,
+      empresa_id: S.empresa.id,
+      tarea_id: tareaId,
+      descripcion: desc, monto, fecha,
+      categoria: document.getElementById('etf-cat').value,
+      numero_factura: document.getElementById('etf-num').value.trim() || null,
+      ruc_emisor: document.getElementById('etf-ruc').value.trim() || null,
+      razon_social_emisor: document.getElementById('etf-razon').value.trim() || null,
+      subtotal_factura: parseFloat(document.getElementById('etf-subtotal').value) || null,
+      iva_pct: parseFloat(document.getElementById('etf-iva').value) || 15,
+      total_factura: monto
+    };
+
+    let gastoId = editId;
+    if (editId) {
+      await dbWrite(db.from('gastos').update(gastoData).eq('id', editId));
+      const idx = S.gastos.findIndex(g => g.id === editId);
+      if (idx >= 0) S.gastos[idx] = { ...S.gastos[idx], ...gastoData };
+    } else {
+      const { data: nuevo, error } = await dbWrite(db.from('gastos').insert(gastoData).select().single());
+      if (error) throw error;
+      gastoId = nuevo.id;
+      S.gastos.push(nuevo);
+    }
+
+    // Upload file if selected
+    const fileInput = document.getElementById('etf-archivo');
+    if (fileInput.files[0] && gastoId) {
+      const file = fileInput.files[0];
+      const ext = file.name.split('.').pop();
+      const path = 'facturas/' + gastoId + '.' + ext;
+      const { data: up } = await db.storage.from('facturas-edifika').upload(path, file, { upsert: true });
+      if (up) {
+        const { data: urlData } = db.storage.from('facturas-edifika').getPublicUrl(path);
+        const url = urlData?.publicUrl;
+        await db.from('gastos').update({ archivo_url: url }).eq('id', gastoId);
+        const g2 = S.gastos.find(g => g.id === gastoId);
+        if (g2) g2.archivo_url = url;
+      }
+      fileInput.value = '';
+    }
+
+    // Recalculate tarea costo_real
+    const gastosT = S.gastos.filter(g => g.tarea_id === tareaId);
+    const totalT = gastosT.reduce((a,b) => a+(+b.monto||0), 0);
+    await db.from('tareas').update({ costo_real: totalT }).eq('id', tareaId);
+    const ti = S.tareas.findIndex(t => t.id === tareaId);
+    if (ti >= 0) S.tareas[ti].costo_real = totalT;
+    document.getElementById('et-real').value = totalT.toFixed(2);
+
+    cerrarFormFactura();
+    cargarFacturasEnModal(tareaId);
+    toast(editId ? 'Factura actualizada ✓' : 'Factura guardada ✓');
+    if (S.currentProyecto) verProyecto(S.currentProyecto.id).then(() => restoreOpenFases());
+    renderDashboard();
+  } catch(e) {
+    console.error(e);
+    showErr('etf-error', e.message || 'Error al guardar');
+  }
+  setLoading('btn-etf', false);
 }
 
 </script>
