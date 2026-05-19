@@ -579,11 +579,19 @@
           <button class="btn btn-secondary" style="flex:1" onclick="editarProyectoActual()">✏️ Editar</button>
           <button class="btn btn-danger" onclick="eliminarProyectoActual()" style="padding:12px 16px">🗑️</button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <button class="btn" style="background:#1e40af;color:white" onclick="reporteFicha()">📋 Ficha del proyecto</button>
-          <button class="btn" style="background:#065f46;color:white" onclick="reporteFinanciero()">💰 Estado financiero</button>
-          <button class="btn" style="background:#92400e;color:white" onclick="reporteGastos()">🧾 Libro de gastos</button>
-          <button class="btn" style="background:#4c1d95;color:white" onclick="reporteVentas()">🏠 Reporte de ventas</button>
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--s400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Reportes del proyecto</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+            <button class="btn" style="background:#1e40af;color:white;font-size:12px" onclick="reporteFicha()">📋 Ficha del proyecto</button>
+            <button class="btn" style="background:#065f46;color:white;font-size:12px" onclick="reporteFinanciero()">💰 Estado financiero</button>
+            <button class="btn" style="background:#92400e;color:white;font-size:12px" onclick="reporteGastos()">🧾 Libro de gastos</button>
+            <button class="btn" style="background:#4c1d95;color:white;font-size:12px" onclick="reporteVentas()">🏠 Reporte de ventas</button>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--s400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;margin-top:4px">Reportes tributarios</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button class="btn" style="background:#7c3aed;color:white;font-size:12px" onclick="reporteTributarioMensual()">📊 Tributario mensual</button>
+            <button class="btn" style="background:#b45309;color:white;font-size:12px" onclick="reporteDeduciblesIR()">📑 Deducibles IR</button>
+          </div>
         </div>
       </div>
 
@@ -704,6 +712,10 @@
           </div>
         </div>
 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;margin-bottom:4px">
+          <button class="btn" style="background:var(--s100);color:var(--dark2)" onclick="abrirTutorial()">📖 Tutorial</button>
+          <button class="btn" style="background:var(--s100);color:var(--dark2)" onclick="abrirInstalar()">📲 Instalar app</button>
+        </div>
         <button class="btn" style="background:var(--dark);color:var(--white);width:100%;margin-top:4px" onclick="handleLogout()">🚪 Cerrar sesión</button>
       </div>
 
@@ -1209,6 +1221,20 @@
               <option value="0">0%</option><option value="15" selected>15%</option>
             </select></div>
         </div>
+        <div class="row2">
+          <div class="form-group"><label class="form-label-light">Retención IR %</label>
+            <select id="etf-ret-pct" class="form-input-light" onchange="calcRetETF()">
+              <option value="0">0% - No aplica</option>
+              <option value="1">1% - Compra bienes</option>
+              <option value="2">2% - Servicios</option>
+              <option value="8">8% - Arrendamiento</option>
+              <option value="10">10% - Honorarios</option>
+            </select></div>
+          <div class="form-group"><label class="form-label-light">Retención IR ($)</label>
+            <input type="number" id="etf-ret-valor" class="form-input-light" step="0.01" readonly style="background:var(--s100)"></div>
+        </div>
+        <div class="form-group"><label class="form-label-light">N° Comprobante de retención</label>
+          <input type="text" id="etf-comp-ret" class="form-input-light" placeholder="001-001-000000001"></div>
         <div class="form-group"><label class="form-label-light">📎 Subir factura (imagen o PDF)</label>
           <input type="file" id="etf-archivo" class="form-input-light" accept="image/*,application/pdf">
           <div id="etf-archivo-info" style="font-size:11px;color:var(--green);margin-top:3px"></div>
@@ -1412,6 +1438,83 @@
     <div style="display:flex;gap:8px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-factura-tarea')">Cancelar</button>
       <button class="btn btn-primary" style="flex:1" id="btn-mft" onclick="guardarFacturaTarea()">Guardar factura</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Tutorial -->
+<div class="modal-overlay" id="modal-tutorial">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📖 Guía de uso — Edifika</div>
+    <div id="tutorial-contenido" style="min-height:200px"></div>
+    <div style="display:flex;gap:8px">
+      <button id="btn-tut-prev" onclick="tutorialAnt()" class="btn btn-secondary" style="flex:1">← Anterior</button>
+      <button id="btn-tut-next" onclick="tutorialSig()" class="btn btn-primary" style="flex:1">Siguiente →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Instalar App -->
+<div class="modal-overlay" id="modal-instalar">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📲 Instalar Edifika</div>
+    <div style="margin-bottom:14px">
+      <div style="background:#1C1917;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="color:#F59E0B;font-weight:700;font-size:13px;margin-bottom:8px">📱 Android (Chrome)</div>
+        <div style="color:#A8A29E;font-size:12px;line-height:1.8">
+          1. Abre Edifika en Chrome<br>
+          2. Toca los 3 puntos ⋮ (esquina superior derecha)<br>
+          3. Selecciona <strong style="color:white">"Agregar a pantalla de inicio"</strong><br>
+          4. Confirma tocando "Agregar"
+        </div>
+      </div>
+      <div style="background:#1C1917;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="color:#F59E0B;font-weight:700;font-size:13px;margin-bottom:8px">🖥️ Windows / Mac (Chrome o Edge)</div>
+        <div style="color:#A8A29E;font-size:12px;line-height:1.8">
+          1. Abre Edifika en Chrome o Edge<br>
+          2. Busca el ícono de instalación 💻 en la barra de dirección (a la derecha)<br>
+          3. Clic en <strong style="color:white">"Instalar Edifika"</strong><br>
+          4. O usa el menú ⋮ → <strong style="color:white">"Guardar y compartir → Instalar página como app"</strong>
+        </div>
+      </div>
+      <div style="background:#1C1917;border-radius:12px;padding:14px">
+        <div style="color:#F59E0B;font-weight:700;font-size:13px;margin-bottom:8px">🍎 iPhone / iPad (Safari)</div>
+        <div style="color:#A8A29E;font-size:12px;line-height:1.8">
+          1. Abre Edifika en Safari<br>
+          2. Toca el botón compartir 📤 (parte inferior de la pantalla)<br>
+          3. Selecciona <strong style="color:white">"Agregar a pantalla de inicio"</strong><br>
+          4. Confirma tocando "Agregar"
+        </div>
+      </div>
+    </div>
+    <button id="btn-instalar-directo" style="display:none;width:100%;margin-bottom:8px" class="btn btn-primary">⬇️ Instalar ahora</button>
+    <div style="font-size:11px;color:var(--s400);text-align:center;margin-bottom:12px">edifika-delta.vercel.app</div>
+    <button onclick="closeModal('modal-instalar')" class="btn btn-secondary" style="width:100%">Cerrar</button>
+  </div>
+</div>
+
+<!-- Modal: Selector mes tributario -->
+<div class="modal-overlay" id="modal-tri-selector">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📊 Resumen tributario mensual</div>
+    <div style="font-size:13px;color:var(--s600);margin-bottom:14px">Selecciona el período para generar el resumen de compras con IVA y retenciones, listo para tu contador.</div>
+    <div class="row2">
+      <div class="form-group"><label class="form-label-light">Mes</label>
+        <select id="tri-mes" class="form-input-light">
+          <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+          <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+          <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select></div>
+      <div class="form-group"><label class="form-label-light">Año</label>
+        <input type="number" id="tri-ano" class="form-input-light" value="2025" min="2020" max="2030"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeModal('modal-tri-selector')" class="btn btn-secondary" style="flex:1">Cancelar</button>
+      <button onclick="generarReporteTributario()" class="btn btn-primary" style="flex:1">Generar reporte</button>
     </div>
   </div>
 </div>
@@ -4289,6 +4392,349 @@ async function guardarFacturaInline() {
   }
   setLoading('btn-etf', false);
 }
+
+
+// ══ RETENCIÓN CALCULATORS ══
+function calcRetETF() {
+  const pct = parseFloat(document.getElementById('etf-ret-pct').value) || 0;
+  const base = parseFloat(document.getElementById('etf-subtotal').value) || parseFloat(document.getElementById('etf-monto').value) || 0;
+  document.getElementById('etf-ret-valor').value = (base * pct / 100).toFixed(2);
+}
+function calcRetMG() {
+  const pct = parseFloat(document.getElementById('mg-ret-pct').value) || 0;
+  const base = parseFloat(document.getElementById('mg-subtotal').value) || parseFloat(document.getElementById('mg-monto').value) || 0;
+  document.getElementById('mg-ret-valor').value = (base * pct / 100).toFixed(2);
+}
+
+// ══ DUPLICATE INVOICE VALIDATION ══
+function validarFacturaDuplicada(numFactura, editId) {
+  if (!numFactura) return null;
+  const duplicado = S.gastos.find(g => g.numero_factura === numFactura && g.id !== editId);
+  if (!duplicado) return null;
+  const tarea = duplicado.tarea_id ? S.tareas.find(t => t.id === duplicado.tarea_id) : null;
+  const proy = S.proyectos.find(p => p.id === duplicado.proyecto_id);
+  return `Esta factura (${numFactura}) ya fue registrada en: ${tarea ? '"'+tarea.nombre+'"' : 'Gastos adicionales'}${proy?' · Proyecto: '+proy.nombre:''}`;
+}
+
+// ══ PWA SETUP ══
+function configurarPWA() {
+  // Get logo from existing img tag
+  const logoEl = document.querySelector('img[alt="Edifika"]');
+  const logoSrc = logoEl ? logoEl.src : '';
+  const manifest = {
+    name: 'Edifika',
+    short_name: 'Edifika',
+    description: 'Gestión de proyectos de construcción inmobiliaria',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#1C1917',
+    theme_color: '#F59E0B',
+    orientation: 'any',
+    icons: logoSrc ? [
+      { src: logoSrc, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: logoSrc, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+    ] : []
+  };
+  try {
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    let link = document.getElementById('manifest-link');
+    if (!link) { link = document.createElement('link'); link.id = 'manifest-link'; link.rel = 'manifest'; document.head.appendChild(link); }
+    link.href = url;
+  } catch(e) { console.warn('PWA manifest:', e); }
+  // Install prompt
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    window._pwaPrompt = e;
+    const btn = document.getElementById('btn-instalar-directo');
+    if (btn) { btn.style.display = 'block'; btn.onclick = () => { e.prompt(); }; }
+  });
+}
+
+function abrirInstalar() {
+  abrirModal('modal-instalar');
+}
+
+// ══ TUTORIAL ══
+let tutorialPaso = 0;
+const TUTORIAL_PASOS = [
+  { icon:'🏗️', title:'Crea tu proyecto', desc:'Ingresa el nombre, tipo de obra, ubicación, presupuesto total y fecha de entrega. Define las unidades vendibles (departamentos, casas, locales) con su precio base.' },
+  { icon:'📋', title:'Define las fases', desc:'Divide la obra en fases según avance: Estudios y permisos, Excavación y cimentación, Estructura, Mampostería, Instalaciones, Acabados, Entrega. Puedes agregar las que necesites.' },
+  { icon:'✅', title:'Agrega tareas por fase', desc:'Cada fase tiene tareas con su costo estimado. Ejemplo: Fase "Estructura" → tareas "Columnas planta baja", "Vigas y losa". El estimado sirve para comparar contra lo real.' },
+  { icon:'🧾', title:'Registra facturas por tarea', desc:'Al ejecutar cada tarea, registra las facturas recibidas: N° factura, RUC del proveedor, subtotal, IVA, retención IR aplicada. El sistema calcula el costo real automáticamente.' },
+  { icon:'🏠', title:'Registra las ventas', desc:'Cuando vendas una unidad, regístrala con los datos del comprador, precio, forma de pago. Para crédito directo, genera el plan de cuotas y marca cada pago recibido.' },
+  { icon:'📊', title:'Genera reportes', desc:'Desde el proyecto accedes a: Ficha del proyecto, Estado financiero, Libro de gastos (para tu contador), Reporte de ventas, Resumen tributario mensual y Deducibles IR.' },
+  { icon:'💡', title:'Gastos adicionales vs Facturas en tareas', desc:'Las facturas de ejecución van dentro de las tareas. Los "Gastos adicionales" son para gastos sin tarea asignada: seguros de obra, gastos legales, notaría, publicidad, conexiones de servicios.' },
+];
+
+function abrirTutorial() {
+  tutorialPaso = 0;
+  renderTutorialPaso();
+  abrirModal('modal-tutorial');
+}
+
+function renderTutorialPaso() {
+  const p = TUTORIAL_PASOS[tutorialPaso];
+  const el = document.getElementById('tutorial-contenido');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:52px;margin-bottom:14px">${p.icon}</div>
+      <div style="font-size:18px;font-weight:700;color:var(--dark2);margin-bottom:12px">${p.title}</div>
+      <div style="font-size:14px;color:var(--s600);line-height:1.6;margin-bottom:20px">${p.desc}</div>
+      <div style="display:flex;justify-content:center;gap:6px;margin-bottom:20px">
+        ${TUTORIAL_PASOS.map((_,i) => `<div style="width:8px;height:8px;border-radius:50%;background:${i===tutorialPaso?'var(--amber)':'var(--s200)'}"></div>`).join('')}
+      </div>
+    </div>`;
+  document.getElementById('btn-tut-prev').style.visibility = tutorialPaso === 0 ? 'hidden' : 'visible';
+  document.getElementById('btn-tut-next').textContent = tutorialPaso === TUTORIAL_PASOS.length-1 ? '✓ Entendido' : 'Siguiente →';
+}
+
+function tutorialSig() {
+  if (tutorialPaso < TUTORIAL_PASOS.length-1) { tutorialPaso++; renderTutorialPaso(); }
+  else closeModal('modal-tutorial');
+}
+function tutorialAnt() {
+  if (tutorialPaso > 0) { tutorialPaso--; renderTutorialPaso(); }
+}
+
+// Helper to open modal consistently
+function abrirModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.style.display = 'flex'; el.classList.add('active'); }
+}
+
+// ══ TRIBUTARY REPORTS ══
+function seleccionarMesTributario() {
+  const now = new Date();
+  const mesEl = document.getElementById('tri-mes');
+  const anoEl = document.getElementById('tri-ano');
+  if (mesEl) mesEl.value = now.getMonth() + 1;
+  if (anoEl) anoEl.value = now.getFullYear();
+  abrirModal('modal-tri-selector');
+}
+
+function reporteTributarioMensual() {
+  seleccionarMesTributario();
+}
+
+function generarReporteTributario() {
+  const mes = parseInt(document.getElementById('tri-mes').value);
+  const ano = parseInt(document.getElementById('tri-ano').value);
+  closeModal('modal-tri-selector');
+
+  const meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const gastosF = S.gastos.filter(g => {
+    if (!g.fecha) return false;
+    const d = new Date(g.fecha + 'T00:00:00');
+    return d.getMonth()+1 === mes && d.getFullYear() === ano;
+  });
+  const emp = S.empresa;
+
+  const totalBase = gastosF.reduce((a,b) => a+(+b.subtotal_factura||+b.monto||0), 0);
+  const totalIVA = gastosF.reduce((a,b) => a+((+b.subtotal_factura||0)*(+b.iva_pct||15)/100), 0);
+  const totalRet = gastosF.reduce((a,b) => a+(+b.retencion_ir_valor||0), 0);
+  const totalMonto = gastosF.reduce((a,b) => a+(+b.monto||0), 0);
+  const sinFact = gastosF.filter(g => !g.numero_factura).length;
+  const conFact = gastosF.filter(g => g.numero_factura).length;
+
+  let h = `<div class="hdr"><div style="display:flex;gap:10px;align-items:center">
+    <div class="logo">E</div>
+    <div><div class="app">Edifika</div><div class="emp">${emp?.nombre||''}</div></div>
+    </div>
+    <div><div class="rtitle">RESUMEN TRIBUTARIO MENSUAL</div><div class="rsub">${meses[mes]} ${ano} · Para uso del contador</div></div></div>
+  <div class="pband"><div><div class="pnombre">${meses[mes]} ${ano}</div><div class="pinfo">Período de análisis · IVA 15% · Régimen General</div></div>
+  <div class="pinfo tr">Generado: ${new Date().toLocaleDateString('es-EC')}</div></div>
+  <div class="page">`;
+
+  // Resumen para formularios
+  h += `<div class="sec"><div class="stitle">Datos para Formulario 104 (IVA) y 103 (Retenciones)</div>
+  <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card camber"><div class="cl">Base imponible compras</div><div class="cv" style="font-size:12px">${M(totalBase)}</div></div>
+    <div class="card cblue"><div class="cl">IVA en compras (crédito trib.)</div><div class="cv" style="font-size:12px">${M(totalIVA)}</div></div>
+    <div class="card cgreen"><div class="cl">Retenciones IR emitidas</div><div class="cv" style="font-size:12px">${M(totalRet)}</div></div>
+  </div>
+  <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px;margin-top:10px;font-size:12px;color:#1E40AF;line-height:1.7">
+    <strong>📋 Instrucciones para el contador:</strong><br>
+    • <strong>Form. 104 (IVA):</strong> Casilla "Crédito tributario de compras" = ${M(totalIVA)}<br>
+    • <strong>Form. 103 (Retenciones IR):</strong> Total retenciones emitidas = ${M(totalRet)}<br>
+    • Facturas con respaldo: ${conFact} · Sin N° factura (no deducibles): ${sinFact}
+  </div></div>`;
+
+  // Detalle de facturas
+  h += `<div class="sec"><div class="stitle">Detalle de Compras — ${meses[mes]} ${ano}</div>
+  <table style="font-size:9px">
+    <tr><th>Fecha</th><th>Descripción</th><th>N° Factura</th><th>RUC</th><th>Razón Social</th><th class="tr">Base</th><th class="tr">IVA</th><th class="tr">Ret. IR</th><th class="tr">Total</th></tr>`;
+  gastosF.forEach(g => {
+    const iva = (+g.subtotal_factura||0)*(+g.iva_pct||15)/100;
+    const noDeducible = !g.numero_factura;
+    h += `<tr ${noDeducible?'style="color:#DC2626"':''}>
+      <td>${D(g.fecha)}</td>
+      <td>${g.descripcion||'—'}</td>
+      <td style="font-size:8px">${g.numero_factura||'<em>Sin factura</em>'}</td>
+      <td style="font-size:8px">${g.ruc_emisor||'—'}</td>
+      <td style="font-size:8px">${g.razon_social_emisor||'—'}</td>
+      <td class="tr">${g.subtotal_factura?M(g.subtotal_factura):'—'}</td>
+      <td class="tr">${g.subtotal_factura?M(iva):'—'}</td>
+      <td class="tr">${g.retencion_ir_valor?M(g.retencion_ir_valor)+(g.retencion_ir_pct?' ('+g.retencion_ir_pct+'%)':''):'—'}</td>
+      <td class="tr bold">${M(g.monto)}</td></tr>`;
+  });
+  h += `<tr class="tf"><td colspan="5" class="bold">TOTALES (${gastosF.length} registros)</td>
+    <td class="tr">${M(totalBase)}</td><td class="tr">${M(totalIVA)}</td>
+    <td class="tr">${M(totalRet)}</td><td class="tr">${M(totalMonto)}</td></tr>
+  </table></div>`;
+
+  if (sinFact > 0) h += `<p style="color:#DC2626;font-size:11px;margin-top:6px">⚠️ ${sinFact} gasto(s) sin N° factura no son deducibles tributariamente y no generan crédito de IVA.</p>`;
+  h += FTR() + '</div>';
+  abrirReporte(h, 'Tributario ' + meses[mes] + ' ' + ano);
+}
+
+function reporteDeduciblesIR() {
+  const ano = new Date().getFullYear();
+  const gastosFact = S.gastos.filter(g => g.numero_factura && g.ruc_emisor);
+  const gastosNoFact = S.gastos.filter(g => !g.numero_factura || !g.ruc_emisor);
+  const totalDeducible = gastosFact.reduce((a,b) => a+(+b.monto||0), 0);
+  const totalNoDeducible = gastosNoFact.reduce((a,b) => a+(+b.monto||0), 0);
+  const emp = S.empresa;
+  const CL = {materiales:'Materiales',mano_obra:'Mano de obra',permisos:'Permisos',transporte:'Transporte',imprevistos:'Imprevistos',otros:'Otros'};
+
+  let h = `<div class="hdr"><div style="display:flex;gap:10px;align-items:center">
+    <div class="logo">E</div><div><div class="app">Edifika</div><div class="emp">${emp?.nombre||''}</div></div></div>
+    <div><div class="rtitle">GASTOS DEDUCIBLES PARA IR</div><div class="rsub">Ejercicio fiscal · Para Form. 102</div></div></div>
+  <div class="pband"><div><div class="pnombre">Todos los proyectos</div><div class="pinfo">Solo facturas con RUC y N° válido</div></div>
+  <div class="pinfo tr">Generado: ${new Date().toLocaleDateString('es-EC')}</div></div>
+  <div class="page">`;
+
+  h += `<div class="cards" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card cgreen"><div class="cl">Total deducible</div><div class="cv" style="font-size:12px">${M(totalDeducible)}</div></div>
+    <div class="card cred"><div class="cl">No deducible</div><div class="cv" style="font-size:12px">${M(totalNoDeducible)}</div></div>
+    <div class="card cblue"><div class="cl">Facturas válidas</div><div class="cv">${gastosFact.length}</div></div>
+  </div>
+  <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#065F46;line-height:1.7">
+    <strong>📋 Para el contador (Form. 102 — Persona Natural):</strong><br>
+    • Gastos deducibles totales: <strong>${M(totalDeducible)}</strong><br>
+    • Estos gastos reducen la base imponible del Impuesto a la Renta<br>
+    • Requisito: factura electrónica con RUC válido del emisor
+  </div>`;
+
+  // Por categoría
+  const porCat = {};
+  gastosFact.forEach(g => { porCat[g.categoria] = (porCat[g.categoria]||0) + (+g.monto||0); });
+  h += `<div class="sec"><div class="stitle">Deducibles por Categoría</div>
+  <table><tr><th>Categoría</th><th class="tr">Monto</th><th class="tr">%</th></tr>`;
+  Object.entries(porCat).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => {
+    h += `<tr><td>${CL[k]||k}</td><td class="tr">${M(v)}</td><td class="tr">${totalDeducible>0?((v/totalDeducible)*100).toFixed(1)+'%':'—'}</td></tr>`;
+  });
+  h += `<tr class="tf"><td>TOTAL DEDUCIBLE</td><td class="tr">${M(totalDeducible)}</td><td class="tr">100%</td></tr></table></div>`;
+
+  // Detalle
+  h += `<div class="sec"><div class="stitle">Detalle de Gastos Deducibles</div>
+  <table style="font-size:9px"><tr><th>Fecha</th><th>Descripción</th><th>N° Factura</th><th>RUC</th><th>Razón Social</th><th>Cat.</th><th class="tr">Monto</th></tr>`;
+  gastosFact.sort((a,b)=>new Date(a.fecha)-new Date(b.fecha)).forEach(g => {
+    h += `<tr><td>${D(g.fecha)}</td><td>${g.descripcion||'—'}</td>
+      <td style="font-size:8px">${g.numero_factura}</td><td style="font-size:8px">${g.ruc_emisor}</td>
+      <td style="font-size:8px">${g.razon_social_emisor||'—'}</td>
+      <td>${CL[g.categoria]||''}</td><td class="tr bold">${M(g.monto)}</td></tr>`;
+  });
+  h += `<tr class="tf"><td colspan="6">TOTAL</td><td class="tr">${M(totalDeducible)}</td></tr></table></div>`;
+
+  if (gastosNoFact.length > 0) {
+    h += `<div class="sec"><div class="stitle" style="color:#DC2626">Gastos NO Deducibles (sin factura válida)</div>
+    <table style="font-size:9px"><tr><th>Fecha</th><th>Descripción</th><th>Razón</th><th class="tr">Monto</th></tr>`;
+    gastosNoFact.forEach(g => {
+      const razon = !g.numero_factura ? 'Sin N° factura' : !g.ruc_emisor ? 'Sin RUC' : '—';
+      h += `<tr style="color:#DC2626"><td>${D(g.fecha)}</td><td>${g.descripcion||'—'}</td><td>${razon}</td><td class="tr">${M(g.monto)}</td></tr>`;
+    });
+    h += `<tr class="tf"><td colspan="3">TOTAL NO DEDUCIBLE</td><td class="tr">${M(totalNoDeducible)}</td></tr></table></div>`;
+  }
+  h += FTR() + '</div>';
+  abrirReporte(h, 'Gastos Deducibles IR');
+}
+
+// Update guardarFacturaInline to include retención fields
+const _origGuardarFacturaInline = guardarFacturaInline;
+async function guardarFacturaInline() {
+  const tareaId = document.getElementById('et-id').value;
+  const editId = document.getElementById('etf-edit-id').value;
+  const desc = document.getElementById('etf-desc').value.trim();
+  const monto = parseFloat(document.getElementById('etf-monto').value);
+  const fecha = document.getElementById('etf-fecha').value;
+  if (!desc || !monto || !fecha) { showErr('etf-error','Descripción, monto y fecha son obligatorios'); return; }
+
+  // Duplicate check
+  const numFact = document.getElementById('etf-num').value.trim();
+  if (numFact) {
+    const dup = validarFacturaDuplicada(numFact, editId);
+    if (dup && !confirm('⚠️ ' + dup + '\n\n¿Deseas registrarla de todos modos?')) return;
+  }
+
+  const tarea = S.tareas.find(t => t.id === tareaId);
+  setLoading('btn-etf', true);
+  try {
+    const gastoData = {
+      proyecto_id: tarea?.proyecto_id || S.currentProyecto?.id,
+      empresa_id: S.empresa.id,
+      tarea_id: tareaId,
+      descripcion: desc, monto, fecha,
+      categoria: document.getElementById('etf-cat').value,
+      numero_factura: numFact || null,
+      ruc_emisor: document.getElementById('etf-ruc').value.trim() || null,
+      razon_social_emisor: document.getElementById('etf-razon').value.trim() || null,
+      subtotal_factura: parseFloat(document.getElementById('etf-subtotal').value) || null,
+      iva_pct: parseFloat(document.getElementById('etf-iva').value) || 15,
+      total_factura: monto,
+      retencion_ir_pct: parseFloat(document.getElementById('etf-ret-pct').value) || 0,
+      retencion_ir_valor: parseFloat(document.getElementById('etf-ret-valor').value) || 0,
+      num_comprobante_retencion: document.getElementById('etf-comp-ret').value.trim() || null
+    };
+
+    let gastoId = editId;
+    if (editId) {
+      await dbWrite(db.from('gastos').update(gastoData).eq('id', editId));
+      const idx = S.gastos.findIndex(g => g.id === editId);
+      if (idx >= 0) S.gastos[idx] = { ...S.gastos[idx], ...gastoData };
+    } else {
+      const { data: nuevo, error } = await dbWrite(db.from('gastos').insert(gastoData).select().single());
+      if (error) throw error;
+      gastoId = nuevo.id;
+      S.gastos.push(nuevo);
+    }
+
+    const fileInput = document.getElementById('etf-archivo');
+    if (fileInput.files[0] && gastoId) {
+      const file = fileInput.files[0];
+      const ext = file.name.split('.').pop();
+      const path = 'facturas/' + gastoId + '.' + ext;
+      const { data: up } = await db.storage.from('facturas-edifika').upload(path, file, { upsert: true });
+      if (up) {
+        const { data: urlData } = db.storage.from('facturas-edifika').getPublicUrl(path);
+        if (urlData?.publicUrl) {
+          await db.from('gastos').update({ archivo_url: urlData.publicUrl }).eq('id', gastoId);
+          const g2 = S.gastos.find(g => g.id === gastoId);
+          if (g2) g2.archivo_url = urlData.publicUrl;
+        }
+      }
+      fileInput.value = '';
+    }
+
+    const gastosT = S.gastos.filter(g => g.tarea_id === tareaId);
+    const totalT = gastosT.reduce((a,b) => a+(+b.monto||0), 0);
+    await db.from('tareas').update({ costo_real: totalT }).eq('id', tareaId);
+    const ti = S.tareas.findIndex(t => t.id === tareaId);
+    if (ti >= 0) S.tareas[ti].costo_real = totalT;
+    document.getElementById('et-real').value = totalT.toFixed(2);
+
+    cerrarFormFactura();
+    cargarFacturasEnModal(tareaId);
+    toast(editId ? 'Factura actualizada ✓' : 'Factura guardada ✓');
+    if (S.currentProyecto) verProyecto(S.currentProyecto.id).then(() => restoreOpenFases());
+    renderDashboard();
+  } catch(e) { console.error(e); showErr('etf-error', e.message || 'Error al guardar'); }
+  setLoading('btn-etf', false);
+}
+
+// Initialize PWA on load
+window.addEventListener('load', () => { configurarPWA(); });
 
 </script>
 </body>
