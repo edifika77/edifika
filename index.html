@@ -4447,72 +4447,72 @@ function actualizarBotonesInstalacion(instalado) {
 
 async function abrirInstalar() {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isAndroid = /Android/.test(navigator.userAgent);
   const yaInstalado = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-  if (yaInstalado) { toast('✅ Edifika ya está instalada en este dispositivo'); return; }
+  if (yaInstalado) { toast('Edifika ya esta instalada en este dispositivo'); return; }
 
-  // Android/Desktop: trigger native prompt directly if available
+  // Android/Desktop Chrome/Edge: trigger native install prompt directly
   if (window._pwaPrompt) {
     try {
-      await window._pwaPrompt.prompt();
-      const { outcome } = await window._pwaPrompt.userChoice;
-      if (outcome === 'accepted') {
-        actualizarBotonesInstalacion(true);
-        toast('✅ ¡Instalando Edifika!');
-      }
+      window._pwaPrompt.prompt();
+      const result = await window._pwaPrompt.userChoice;
       window._pwaPrompt = null;
+      if (result.outcome === 'accepted') {
+        actualizarBotonesInstalacion(true);
+        toast('Instalando Edifika...');
+      }
       return;
-    } catch(e) { console.warn('Install prompt error:', e); }
+    } catch(e) { console.warn('PWA prompt error:', e); }
   }
 
-  // iOS or prompt not available: show guide modal
+  // Show guide modal with platform-specific content
+  const modal = document.getElementById('modal-instalar');
+  if (!modal) return;
+  const guia = document.getElementById('instalar-guia');
+  if (guia) {
+    if (isIOS) {
+      guia.innerHTML = instalarGuiaIOS();
+    } else if (isAndroid) {
+      guia.innerHTML = instalarGuiaAndroid();
+    } else {
+      guia.innerHTML = instalarGuiaPC();
+    }
+  }
   openModal('modal-instalar');
-  // Update modal content based on platform
-  const guideEl = document.getElementById('instalar-guia');
-  if (!guideEl) return;
-
-  if (isIOS) {
-    guideEl.innerHTML = `
-      <div style="text-align:center;padding:10px 0 16px">
-        <div style="font-size:40px;margin-bottom:10px">🍎</div>
-        <div style="font-size:14px;font-weight:700;color:var(--dark2);margin-bottom:14px">Instalar en iPhone o iPad</div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
-        <div style="background:#DBEAFE;color:#1E40AF;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">1</div>
-        <div style="font-size:13px;color:var(--s600);line-height:1.5">Toca el botón <strong>Compartir</strong> <span style="font-size:18px">⬆️</span> en la barra inferior de Safari</div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
-        <div style="background:#DBEAFE;color:#1E40AF;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div>
-        <div style="font-size:13px;color:var(--s600);line-height:1.5">Desliza hacia abajo y toca <strong>"Agregar a pantalla de inicio"</strong></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px">
-        <div style="background:#DBEAFE;color:#1E40AF;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">3</div>
-        <div style="font-size:13px;color:var(--s600);line-height:1.5">Toca <strong>"Agregar"</strong> — el ícono de Edifika aparecerá en tu pantalla</div>
-      </div>`;
-  } else {
-    guideEl.innerHTML = `
-      <div style="text-align:center;padding:10px 0 16px">
-        <div style="font-size:40px;margin-bottom:10px">💻</div>
-        <div style="font-size:14px;font-weight:700;color:var(--dark2);margin-bottom:14px">Instalar en Windows o Mac</div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
-        <div style="background:#D1FAE5;color:#065F46;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">1</div>
-        <div style="font-size:13px;color:var(--s600);line-height:1.5">Busca el ícono <strong>⊕</strong> o de descarga en la barra de dirección de Chrome/Edge</div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
-        <div style="background:#D1FAE5;color:#065F46;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div>
-        <div style="font-size:13px;color:var(--s600);line-height:1.5">Haz clic en <strong>"Instalar Edifika"</strong></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px">
-        <div style="background:#D1FAE5;color:#065F46;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">3</div>
-        <div style="font-size:13px;color:var(--s600);line-height:1.5">Confirma — Edifika se agrega al escritorio y al menú de inicio</div>
-      </div>`;
-  }
 }
 
-function abrirInstalar() {
-  abrirModal('modal-instalar');
+function instalarGuiaIOS() {
+  return '<div style="text-align:center;margin-bottom:16px"><div style="font-size:44px">🍎</div><div style="font-weight:700;font-size:15px;margin-top:8px">Instalar en iPhone / iPad</div></div>' +
+    paso(1,'#DBEAFE','#1E40AF','Abre Edifika en <strong>Safari</strong> (no Chrome ni Firefox)') +
+    paso(2,'#DBEAFE','#1E40AF','Toca el boton <strong>Compartir</strong> ⬆️ en la parte inferior de la pantalla') +
+    paso(3,'#DBEAFE','#1E40AF','Selecciona <strong>"Agregar a pantalla de inicio"</strong>') +
+    paso(4,'#DBEAFE','#1E40AF','Toca <strong>"Agregar"</strong> — el icono aparece en tu pantalla');
 }
+
+function instalarGuiaAndroid() {
+  return '<div style="text-align:center;margin-bottom:16px"><div style="font-size:44px">🤖</div><div style="font-weight:700;font-size:15px;margin-top:8px">Instalar en Android</div></div>' +
+    paso(1,'#D1FAE5','#065F46','Abre Edifika en <strong>Chrome</strong>') +
+    paso(2,'#D1FAE5','#065F46','Toca el menu <strong>⋮</strong> (tres puntos) arriba a la derecha') +
+    paso(3,'#D1FAE5','#065F46','Selecciona <strong>"Agregar a pantalla de inicio"</strong> o <strong>"Instalar app"</strong>') +
+    paso(4,'#D1FAE5','#065F46','Confirma tocando <strong>"Instalar"</strong> — el icono aparece en tu pantalla');
+}
+
+function instalarGuiaPC() {
+  return '<div style="text-align:center;margin-bottom:16px"><div style="font-size:44px">💻</div><div style="font-weight:700;font-size:15px;margin-top:8px">Instalar en Windows o Mac</div></div>' +
+    paso(1,'#FEF3C7','#92400E','Abre Edifika en <strong>Chrome</strong> o <strong>Edge</strong>') +
+    paso(2,'#FEF3C7','#92400E','Busca el icono de instalacion <strong>⊕</strong> en la barra de direccion (a la derecha)') +
+    paso(3,'#FEF3C7','#92400E','Haz clic en <strong>"Instalar Edifika"</strong> y confirma') +
+    '<div style="background:#F0FDF4;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:12px;color:#065F46">Si no ves el icono: menu Chrome ⋮ → Mas herramientas → Crear acceso directo → marcar "Abrir como ventana"</div>';
+}
+
+function paso(n, bg, color, texto) {
+  return '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
+    '<div style="background:' + bg + ';color:' + color + ';border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">' + n + '</div>' +
+    '<div style="font-size:13px;color:var(--s600);line-height:1.5;padding-top:3px">' + texto + '</div></div>';
+}
+
+
 
 // ══ TUTORIAL ══
 let tutorialPaso = 0;
