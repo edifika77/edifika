@@ -1,7 +1,7 @@
 {
   "name": "Edifika",
   "short_name": "Edifika",
-  "description": "Gestión de proyectos de construcción inmobiliaria",
+  "description": "Gesti\u00f3n de proyectos de construcci\u00f3n inmobiliaria",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -14,13 +14,13 @@
       "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }
