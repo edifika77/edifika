@@ -4500,8 +4500,7 @@ function tutorialAnt() {
 
 // Helper to open modal consistently
 function abrirModal(id) {
-  const el = document.getElementById(id);
-  if (el) { el.style.display = 'flex'; el.classList.add('active'); }
+  openModal(id); // use existing openModal which is compatible with closeModal
 }
 
 // ══ TRIBUTARY REPORTS ══
