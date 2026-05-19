@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Edifika</title>
   <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="./manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Edifika">
   <meta name="theme-color" content="#F59E0B">
+  <link rel="manifest" href="./manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Edifika">
@@ -4404,42 +4406,6 @@ function validarFacturaDuplicada(numFactura, editId) {
 
 // ══ PWA SETUP ══
 function configurarPWA() {
-  // Get favicon already embedded in this page
-  const faviconLink = document.querySelector('link[rel="icon"]');
-  const iconSrc = faviconLink ? faviconLink.href : '';
-
-  // Generate manifest dynamically with embedded icon
-  const manifest = {
-    name: 'Edifika',
-    short_name: 'Edifika',
-    description: 'Gestión de proyectos de construcción inmobiliaria',
-    start_url: window.location.href,
-    scope: window.location.origin + '/',
-    display: 'standalone',
-    background_color: '#1C1917',
-    theme_color: '#F59E0B',
-    orientation: 'any',
-    lang: 'es',
-    icons: iconSrc ? [
-      { src: iconSrc, sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: iconSrc, sizes: '192x192', type: 'image/png', purpose: 'maskable' }
-    ] : []
-  };
-
-  // Inject manifest via blob URL
-  try {
-    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-    const blobURL = URL.createObjectURL(blob);
-    let link = document.querySelector('link[rel="manifest"]');
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'manifest';
-      document.head.appendChild(link);
-    }
-    link.href = blobURL;
-    console.log('[PWA] Manifest injected');
-  } catch(e) { console.warn('[PWA] Manifest error:', e); }
-
   // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(reg => {
