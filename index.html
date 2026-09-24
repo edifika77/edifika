@@ -887,14 +887,18 @@
           <label class="form-label-light">Razón social del emisor</label>
           <input type="text" id="mg-razon" class="form-input-light" placeholder="Empresa o persona que emite">
         </div>
-        <div style="display:grid;grid-template-columns:1fr 80px 1fr;gap:8px;margin-bottom:10px;align-items:end">
+        <div style="display:grid;grid-template-columns:1fr 140px 1fr;gap:8px;margin-bottom:10px;align-items:end">
           <div class="form-group" style="margin:0">
             <label class="form-label-light">Subtotal (sin IVA) $</label>
             <input type="number" id="mg-subtotal" class="form-input-light" placeholder="0.00" oninput="calcularTotal()">
           </div>
           <div class="form-group" style="margin:0">
             <label class="form-label-light">IVA %</label>
-            <input type="number" id="mg-iva-pct" class="form-input-light" value="15" oninput="calcularTotal()">
+            <select id="mg-iva-pct" class="form-input-light" onchange="calcularTotal()">
+              <option value="0">0% - Exento</option>
+              <option value="5">5% - Mat. construcción</option>
+              <option value="15" selected>15% - General</option>
+            </select>
           </div>
           <div class="form-group" style="margin:0">
             <label class="form-label-light">Total factura $</label>
@@ -1187,6 +1191,19 @@
         <option value="completada">✅ Completada</option>
       </select>
     </div>
+    <div style="border:1px solid var(--s200);border-radius:10px;padding:12px;margin-bottom:12px;background:var(--s50)">
+      <div style="font-size:12px;font-weight:600;color:var(--s600);margin-bottom:8px">📂 Mover tarea</div>
+      <div class="form-group" style="margin-bottom:8px"><label class="form-label-light">Proyecto</label>
+        <select id="et-proyecto-id" class="form-input-light" onchange="cargarFasesEnEditar()">
+          <option value="">— mismo proyecto —</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label-light">Fase</label>
+        <select id="et-fase-id" class="form-input-light">
+          <option value="">— misma fase —</option>
+        </select>
+      </div>
+    </div>
     <div style="background:var(--s50);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--s600)">
       💡 El costo real se calcula automáticamente al agregar facturas. Si no hay facturas, puedes ingresarlo manualmente.
     </div>
@@ -1236,7 +1253,9 @@
             <input type="number" id="etf-subtotal" class="form-input-light" step="0.01" oninput="calcTotalETF()"></div>
           <div class="form-group"><label class="form-label-light">IVA %</label>
             <select id="etf-iva" class="form-input-light" onchange="calcTotalETF()">
-              <option value="0">0%</option><option value="15" selected>15%</option>
+              <option value="0">0% - Exento</option>
+              <option value="5">5% - Mat. construcción</option>
+              <option value="15" selected>15% - General</option>
             </select></div>
         </div>
         <div class="row2">
@@ -1440,8 +1459,9 @@
           <input type="number" id="mft-subtotal" class="form-input-light" step="0.01" oninput="calcTotalMFT()"></div>
         <div class="form-group"><label class="form-label-light">IVA %</label>
           <select id="mft-iva" class="form-input-light" onchange="calcTotalMFT()">
-            <option value="0">0%</option>
-            <option value="15" selected>15%</option>
+            <option value="0">0% - Exento</option>
+            <option value="5">5% - Mat. construcción</option>
+            <option value="15" selected>15% - General</option>
           </select>
         </div>
       </div>
@@ -2208,7 +2228,7 @@ function restoreOpenFases() {
   });
 }
 
-function abrirEditarTarea(tareaId) {
+async function abrirEditarTarea(tareaId) {
   const t = S.currentTareas.find(x => x.id === tareaId);
   if (!t) return;
   document.getElementById('et-id').value = t.id;
@@ -2218,13 +2238,48 @@ function abrirEditarTarea(tareaId) {
   document.getElementById('et-real').value = t.costo_real || '';
   document.getElementById('et-estado').value = t.estado;
   document.getElementById('et-error').classList.remove('show');
+
+  // Populate project selector
+  const selProy = document.getElementById('et-proyecto-id');
+  selProy.innerHTML = '<option value="">— mismo proyecto —</option>';
+  const proyectos = S.proyectos || [];
+  proyectos.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.nombre;
+    if (p.id === S.currentProyecto?.id) opt.selected = true;
+    selProy.appendChild(opt);
+  });
+
+  // Populate phase selector for current project
+  await cargarFasesEnEditar(t.fase_id);
+
   openModal('modal-editar-tarea');
+}
+
+async function cargarFasesEnEditar(selectedFaseId) {
+  const selFase = document.getElementById('et-fase-id');
+  const proyId = document.getElementById('et-proyecto-id').value || S.currentProyecto?.id;
+  selFase.innerHTML = '<option value="">— misma fase —</option>';
+  if (!proyId) return;
+  const { data: fases } = await db.from('fases').select('id,nombre').eq('proyecto_id', proyId).order('orden');
+  (fases || []).forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.id;
+    opt.textContent = f.nombre;
+    if (f.id === selectedFaseId) opt.selected = true;
+    selFase.appendChild(opt);
+  });
 }
 
 async function guardarEdicionTarea() {
   const id = document.getElementById('et-id').value;
   const nombre = document.getElementById('et-nombre').value.trim();
   if (!nombre) return showErr('et-error', 'El nombre es obligatorio');
+
+  const nuevaFaseId = document.getElementById('et-fase-id').value || null;
+  const nuevaProyId = document.getElementById('et-proyecto-id').value || S.currentProyecto?.id;
+
   const data = {
     nombre,
     descripcion: document.getElementById('et-desc').value.trim() || null,
@@ -2232,14 +2287,16 @@ async function guardarEdicionTarea() {
     costo_real: parseFloat(document.getElementById('et-real').value) || 0,
     estado: document.getElementById('et-estado').value
   };
+  if (nuevaFaseId) data.fase_id = nuevaFaseId;
+  if (nuevaProyId && nuevaProyId !== S.currentProyecto?.id) data.proyecto_id = nuevaProyId;
+
   setLoading('btn-et', true);
   try {
     const { error } = await db.from('tareas').update(data).eq('id', id);
     if (error) throw error;
-    const t = S.currentTareas.find(x => x.id === id);
-    if (t) Object.assign(t, data);
     closeModal('modal-editar-tarea');
-    toast('Tarea actualizada ✓');
+    const moved = (data.proyecto_id && data.proyecto_id !== S.currentProyecto?.id);
+    toast(moved ? 'Tarea movida a otro proyecto ✓' : 'Tarea actualizada ✓');
     await verProyecto(S.currentProyecto.id);
     restoreOpenFases();
   } catch(e) { showErr('et-error', 'Error al guardar'); }
